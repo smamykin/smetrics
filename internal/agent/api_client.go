@@ -2,6 +2,7 @@ package agent
 
 import (
 	"fmt"
+	"io"
 	"log"
 	"net/http"
 	"os"
@@ -41,6 +42,12 @@ func (c *Client) SendMetrics(metricType string, metricName string, metricValue s
 	}
 	if post.StatusCode != 200 {
 		c.loggerWarning.Printf("error while sending the metrics to server. Status: %d\n", post.StatusCode)
+	}
+
+	defer post.Body.Close()
+	_, err = io.Copy(io.Discard, post.Body)
+	if err != nil {
+		panic(fmt.Errorf("Cannot read the response body. url: %s", url))
 	}
 }
 
