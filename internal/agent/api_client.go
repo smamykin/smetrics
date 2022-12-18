@@ -34,7 +34,7 @@ type Client struct {
 func (c *Client) SendMetrics(metricType string, metricName string, metricValue string) {
 	url := c.MetricAggregatorService + getMetricAggregatorPath(metricType, metricName, metricValue)
 
-	c.loggerInfo.Printf("Client are making request. url: %s\n", url)
+	c.loggerInfo.Printf("client are making request. url: %s\n", url)
 	post, err := http.Post(url, c.MetricAggregatorContentType, strings.NewReader(""))
 
 	if err != nil {
@@ -47,7 +47,7 @@ func (c *Client) SendMetrics(metricType string, metricName string, metricValue s
 	defer post.Body.Close()
 	_, err = io.Copy(io.Discard, post.Body)
 	if err != nil {
-		panic(fmt.Errorf("Cannot read the response body. url: %s", url))
+		panic(fmt.Errorf("cannot read the response body. url: %s", url))
 	}
 }
 
