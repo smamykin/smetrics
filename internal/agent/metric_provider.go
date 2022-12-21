@@ -11,14 +11,11 @@ const (
 	MetricTypeCounter = "counter"
 )
 
-type MetricProvider struct {
-	counter int
-}
+type MetricProvider struct{}
 
-func (mp *MetricProvider) GetMetrics() map[string]IMetric {
+func (mp *MetricProvider) GetMetrics(pollCounter int) map[string]IMetric {
 	var memStats = runtime.MemStats{}
 	runtime.ReadMemStats(&memStats)
-	mp.counter++
 
 	return map[string]IMetric{
 		"Alloc":         MetricGauge(memStats.Alloc),
@@ -50,7 +47,7 @@ func (mp *MetricProvider) GetMetrics() map[string]IMetric {
 		"TotalAlloc":    MetricGauge(memStats.TotalAlloc),
 
 		//custom
-		"PollCount":   MetricCounter(mp.counter),
+		"PollCount":   MetricCounter(pollCounter),
 		"RandomValue": MetricGauge(rand.Float64()),
 	}
 

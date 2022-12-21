@@ -12,7 +12,7 @@ type IClient interface {
 }
 
 type IMetricProvider interface {
-	GetMetrics() map[string]IMetric
+	GetMetrics(pollCounter int) map[string]IMetric
 }
 
 type MetricAgent struct {
@@ -22,7 +22,7 @@ type MetricAgent struct {
 }
 
 func (mc *MetricAgent) GatherMetrics() {
-	mc.container = append(mc.container, mc.Provider.GetMetrics())
+	mc.container = append(mc.container, mc.Provider.GetMetrics(len(mc.container)))
 }
 
 func (mc *MetricAgent) SendMetrics() {
