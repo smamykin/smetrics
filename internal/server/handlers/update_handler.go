@@ -21,7 +21,7 @@ func (u *UpdateHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "text/plain")
 
 	pathElements := strings.Split(r.URL.Path, "/")
-	if len(pathElements) != 5 {
+	if r.Method != "POST" || len(pathElements) != 5 {
 		http.Error(w, "Not found", http.StatusNotFound)
 		return
 	}

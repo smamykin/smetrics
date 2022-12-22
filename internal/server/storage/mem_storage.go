@@ -50,7 +50,7 @@ func (m *MemStorage) UpsertGauge(name string, value float64) error {
 func (m *MemStorage) UpsertCounter(name string, value int64) error {
 	metric, ok := m.counterStore[name]
 	if !ok {
-		metric := CounterMetric{
+		metric = CounterMetric{
 			0,
 			store{name, time.Now()},
 		}
