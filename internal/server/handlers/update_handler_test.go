@@ -77,7 +77,7 @@ func TestUpdateHandler_ServeHTTP(t *testing.T) {
 		},
 		{
 			name:               "unknown type",
-			expectedStatusCode: http.StatusBadRequest,
+			expectedStatusCode: http.StatusNotImplemented,
 			fields: fields{Repository: &repositoryMock{
 				t:                     t,
 				expectedInvokedMethod: "",

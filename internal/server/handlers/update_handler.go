@@ -1,7 +1,6 @@
 package handlers
 
 import (
-	"errors"
 	"net/http"
 	"strconv"
 	"strings"
@@ -35,7 +34,8 @@ func (u *UpdateHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	case "counter":
 		err = u.upsertCounter(metricName, metricValue)
 	default:
-		err = errors.New("metric type is incorrect")
+		http.Error(w, "metric type is incorrect", http.StatusNotImplemented)
+		return
 	}
 
 	if err != nil {
