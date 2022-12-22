@@ -9,33 +9,26 @@ import (
 	"strings"
 )
 
-func NewClient(metricAggregatorService string, metricAggregatorContentType string) *Client {
+func NewClient(metricAggregatorService string) *Client {
 	return &Client{
-		MetricAggregatorService:     metricAggregatorService,
-		MetricAggregatorContentType: metricAggregatorContentType,
-		loggerWarning:               log.New(os.Stdout, "WARNING: ", log.Ldate|log.Ltime),
-		loggerInfo:                  log.New(os.Stdout, "INFO:    ", log.Ldate|log.Ltime),
+		MetricAggregatorService: metricAggregatorService,
+		loggerWarning:           log.New(os.Stdout, "WARNING: ", log.Ldate|log.Ltime),
+		loggerInfo:              log.New(os.Stdout, "INFO:    ", log.Ldate|log.Ltime),
 	}
 
 }
 
-type ILogger interface {
-	Warning(string)
-	Info(string)
-}
-
 type Client struct {
-	MetricAggregatorService     string
-	MetricAggregatorContentType string
-	loggerWarning               *log.Logger
-	loggerInfo                  *log.Logger
+	MetricAggregatorService string
+	loggerWarning           *log.Logger
+	loggerInfo              *log.Logger
 }
 
 func (c *Client) SendMetrics(metricType string, metricName string, metricValue string) {
 	url := c.MetricAggregatorService + getMetricAggregatorPath(metricType, metricName, metricValue)
 
 	c.loggerInfo.Printf("client are making request. url: %s\n", url)
-	post, err := http.Post(url, c.MetricAggregatorContentType, strings.NewReader(""))
+	post, err := http.Post(url, "text/plain", strings.NewReader(""))
 
 	if err != nil {
 		c.loggerWarning.Printf("error while sending the metrics to server. Error: %s\n", err.Error())

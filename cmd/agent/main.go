@@ -14,7 +14,6 @@ func main() {
 	metricAgent := agent.MetricAgent{
 		Client: agent.NewClient(
 			"http://127.0.0.1:8080",
-			"text/plain",
 		),
 		Provider: &agent.MetricProvider{},
 	}

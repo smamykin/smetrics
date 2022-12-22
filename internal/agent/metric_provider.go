@@ -13,58 +13,73 @@ const (
 
 type MetricProvider struct{}
 
-func (mp *MetricProvider) GetMetrics(pollCounter int) map[string]IMetric {
+func (mp *MetricProvider) GetMetrics(pollCounter int) []IMetric {
 	var memStats = runtime.MemStats{}
 	runtime.ReadMemStats(&memStats)
 
-	return map[string]IMetric{
-		"Alloc":         MetricGauge(memStats.Alloc),
-		"BuckHashSys":   MetricGauge(memStats.BuckHashSys),
-		"Frees":         MetricGauge(memStats.Frees),
-		"GCCPUFraction": MetricGauge(memStats.GCCPUFraction),
-		"GCSys":         MetricGauge(memStats.GCSys),
-		"HeapAlloc":     MetricGauge(memStats.HeapAlloc),
-		"HeapIdle":      MetricGauge(memStats.HeapIdle),
-		"HeapInuse":     MetricGauge(memStats.HeapInuse),
-		"HeapObjects":   MetricGauge(memStats.HeapObjects),
-		"HeapReleased":  MetricGauge(memStats.HeapReleased),
-		"HeapSys":       MetricGauge(memStats.Sys),
-		"LastGC":        MetricGauge(memStats.LastGC),
-		"Lookups":       MetricGauge(memStats.Lookups),
-		"MCacheInuse":   MetricGauge(memStats.MCacheInuse),
-		"MCacheSys":     MetricGauge(memStats.MCacheSys),
-		"MSpanInuse":    MetricGauge(memStats.MSpanInuse),
-		"MSpanSys":      MetricGauge(memStats.MSpanSys),
-		"Mallocs":       MetricGauge(memStats.Mallocs),
-		"NextGC":        MetricGauge(memStats.NextGC),
-		"NumForcedGC":   MetricGauge(memStats.NumForcedGC),
-		"NumGC":         MetricGauge(memStats.NumGC),
-		"OtherSys":      MetricGauge(memStats.OtherSys),
-		"PauseTotalNs":  MetricGauge(memStats.PauseTotalNs),
-		"StackInuse":    MetricGauge(memStats.StackInuse),
-		"StackSys":      MetricGauge(memStats.StackSys),
-		"Sys":           MetricGauge(memStats.Sys),
-		"TotalAlloc":    MetricGauge(memStats.TotalAlloc),
+	return []IMetric{
+		MetricGauge{float64(memStats.Alloc), "Alloc"},
+		MetricGauge{float64(memStats.BuckHashSys), "BuckHashSys"},
+		MetricGauge{float64(memStats.Frees), "Frees"},
+		MetricGauge{memStats.GCCPUFraction, "GCCPUFraction"},
+		MetricGauge{float64(memStats.GCSys), "GCSys"},
+		MetricGauge{float64(memStats.HeapAlloc), "HeapAlloc"},
+		MetricGauge{float64(memStats.HeapIdle), "HeapIdle"},
+		MetricGauge{float64(memStats.HeapInuse), "HeapInuse"},
+		MetricGauge{float64(memStats.HeapObjects), "HeapObjects"},
+		MetricGauge{float64(memStats.HeapReleased), "HeapReleased"},
+		MetricGauge{float64(memStats.Sys), "HeapSys"},
+		MetricGauge{float64(memStats.LastGC), "LastGC"},
+		MetricGauge{float64(memStats.Lookups), "Lookups"},
+		MetricGauge{float64(memStats.MCacheInuse), "MCacheInuse"},
+		MetricGauge{float64(memStats.MCacheSys), "MCacheSys"},
+		MetricGauge{float64(memStats.MSpanInuse), "MSpanInuse"},
+		MetricGauge{float64(memStats.MSpanSys), "MSpanSys"},
+		MetricGauge{float64(memStats.Mallocs), "Mallocs"},
+		MetricGauge{float64(memStats.NextGC), "NextGC"},
+		MetricGauge{float64(memStats.NumForcedGC), "NumForcedGC"},
+		MetricGauge{float64(memStats.NumGC), "NumGC"},
+		MetricGauge{float64(memStats.OtherSys), "OtherSys"},
+		MetricGauge{float64(memStats.PauseTotalNs), "PauseTotalNs"},
+		MetricGauge{float64(memStats.StackInuse), "StackInuse"},
+		MetricGauge{float64(memStats.StackSys), "StackSys"},
+		MetricGauge{float64(memStats.Sys), "Sys"},
+		MetricGauge{float64(memStats.TotalAlloc), "TotalAlloc"},
 
 		//custom
-		"PollCount":   MetricCounter(pollCounter),
-		"RandomValue": MetricGauge(rand.Float64()),
+		MetricCounter{pollCounter, "PollCount"},
+		MetricGauge{rand.Float64(), "RandomValue"},
 	}
 
 }
 
-type MetricGauge float64
-type MetricCounter int64
+type MetricGauge struct {
+	value float64
+	name  string
+}
+
+type MetricCounter struct {
+	value int
+	name  string
+}
+
+func (m MetricCounter) GetName() string {
+	return m.name
+}
 
 func (m MetricGauge) String() string {
-	return fmt.Sprintf("%f", m)
+	return fmt.Sprintf("%f", m.value)
 }
 func (m MetricGauge) GetType() string {
 	return MetricTypeGauge
 }
-func (m MetricCounter) String() string {
-	return fmt.Sprintf("%d", m)
+func (m MetricGauge) GetName() string {
+	return m.name
 }
+func (m MetricCounter) String() string {
+	return fmt.Sprintf("%d", m.value)
+}
+
 func (m MetricCounter) GetType() string {
 	return MetricTypeCounter
 }
