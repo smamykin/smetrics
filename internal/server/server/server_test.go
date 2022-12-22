@@ -35,10 +35,16 @@ func TestRouter(t *testing.T) {
 	require.Equal(t, http.StatusOK, statusCode)
 	require.Equal(t, "43", body)
 
+	statusCode, _ = testRequest(t, ts, "POST", "/update/gauge/metric_name2/43.321234")
+	statusCode, body = testRequest(t, ts, "GET", "/value/gauge/metric_name2")
+	require.Equal(t, http.StatusOK, statusCode)
+	require.Equal(t, "43.321", body)
+
 	statusCode, _ = testRequest(t, ts, "GET", "/value/counter/unknown_metric")
 	require.Equal(t, http.StatusNotFound, statusCode)
 
 	statusCode, body = testRequest(t, ts, "GET", "/")
 	require.Equal(t, http.StatusOK, statusCode)
-	require.Equal(t, "<html><ol></ol><ol><li>metric_name:43</li></ol></html>", body)
+	require.Equal(t, "<html><ol><li>metric_name2:43.321234</li></ol><ol><li>metric_name:43</li></ol></html>", body)
+
 }

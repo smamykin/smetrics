@@ -23,7 +23,7 @@ func (g *GetHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		var value float64
 		value, err = g.Repository.GetGauge(metricName)
 		if err == nil {
-			w.Write([]byte(fmt.Sprintf("%f", value)))
+			w.Write([]byte(fmt.Sprintf("%.3f", value)))
 			return
 		}
 	case "counter":
