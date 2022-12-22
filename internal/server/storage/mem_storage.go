@@ -14,19 +14,19 @@ func NewMemStorage() *MemStorage {
 	}
 }
 
-type store struct {
-	name     string
+type metric struct {
+	Name     string
 	createAt time.Time
 }
 
 type GaugeMetric struct {
-	value float64
-	store
+	Value float64
+	metric
 }
 
 type CounterMetric struct {
-	value int64
-	store
+	Value int64
+	metric
 }
 
 type MemStorage struct {
@@ -35,12 +35,48 @@ type MemStorage struct {
 	logger       *log.Logger
 }
 
+func (m *MemStorage) GetAllGauge() []GaugeMetric {
+	var result []GaugeMetric
+
+	for _, value := range m.gaugeStore {
+		result = append(result, value)
+	}
+	return result
+}
+
+func (m *MemStorage) GetAllCounters() []CounterMetric {
+	var result []CounterMetric
+
+	for _, value := range m.counterStore {
+		result = append(result, value)
+	}
+	return result
+}
+
+func (m *MemStorage) GetGauge(name string) (float64, error) {
+	metric, ok := m.gaugeStore[name]
+	if !ok {
+		return .0, NotFoundError{"metric not found"}
+	}
+
+	return metric.Value, nil
+}
+
+func (m *MemStorage) GetCounter(name string) (int64, error) {
+	metric, ok := m.counterStore[name]
+	if !ok {
+		return .0, NotFoundError{"metric not found"}
+	}
+
+	return metric.Value, nil
+}
+
 func (m *MemStorage) UpsertGauge(name string, value float64) error {
 	metric := GaugeMetric{
 		value,
-		store{name, time.Now()},
+		metric{name, time.Now()},
 	}
-	m.gaugeStore[metric.name] = metric
+	m.gaugeStore[metric.Name] = metric
 
 	m.logger.Printf("upsert %#v\n", metric)
 
@@ -48,18 +84,18 @@ func (m *MemStorage) UpsertGauge(name string, value float64) error {
 }
 
 func (m *MemStorage) UpsertCounter(name string, value int64) error {
-	metric, ok := m.counterStore[name]
+	metricInstance, ok := m.counterStore[name]
 	if !ok {
-		metric = CounterMetric{
+		metricInstance = CounterMetric{
 			0,
-			store{name, time.Now()},
+			metric{name, time.Now()},
 		}
-		m.counterStore[metric.name] = metric
+		m.counterStore[metricInstance.Name] = metricInstance
 	}
-	metric.value = metric.value + value
-	m.counterStore[name] = metric
+	metricInstance.Value = metricInstance.Value + value
+	m.counterStore[name] = metricInstance
 
-	m.logger.Printf("upsert %#v\n", metric)
+	m.logger.Printf("upsert %#v\n", metricInstance)
 
 	return nil
 }

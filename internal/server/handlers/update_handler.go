@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"github.com/smamykin/smetrics/internal/server/storage"
 	"net/http"
 	"strconv"
 	"strings"
@@ -9,6 +10,10 @@ import (
 type IRepository interface {
 	UpsertGauge(name string, value float64) error
 	UpsertCounter(name string, value int64) error
+	GetGauge(name string) (float64, error)
+	GetCounter(name string) (int64, error)
+	GetAllGauge() []storage.GaugeMetric
+	GetAllCounters() []storage.CounterMetric
 }
 
 type UpdateHandler struct {
