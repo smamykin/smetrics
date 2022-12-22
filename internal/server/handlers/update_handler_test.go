@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"github.com/stretchr/testify/require"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -98,6 +99,11 @@ func TestUpdateHandler_ServeHTTP(t *testing.T) {
 
 			require.Equal(t, len(tt.fields.Repository.expectedInvokedMethod) != 0, tt.fields.Repository.isInvoked)
 			res := tt.args.w.Result()
+			defer res.Body.Close()
+			_, err := io.ReadAll(res.Body)
+			if err != nil {
+				t.Fatal(err)
+			}
 			require.Equal(t, tt.expectedStatusCode, res.StatusCode)
 		})
 	}
