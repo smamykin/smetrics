@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"github.com/smamykin/smetrics/internal/server/storage"
 	"github.com/stretchr/testify/require"
 	"io"
 	"net/http"
@@ -115,6 +116,23 @@ type repositoryMock struct {
 	expectedInvokedMethod string
 	isInvoked             bool
 }
+
+func (r *repositoryMock) GetGauge(name string) (float64, error) {
+	panic("must not be used in the test")
+}
+
+func (r *repositoryMock) GetCounter(name string) (int64, error) {
+	panic("must not be used in the test")
+}
+
+func (r *repositoryMock) GetAllGauge() []storage.GaugeMetric {
+	panic("must not be used in the test")
+}
+
+func (r *repositoryMock) GetAllCounters() []storage.CounterMetric {
+	panic("must not be used in the test")
+}
+
 type expectedArgs struct {
 	name  string
 	value interface{}
