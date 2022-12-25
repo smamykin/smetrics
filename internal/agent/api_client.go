@@ -2,11 +2,9 @@ package agent
 
 import (
 	"fmt"
-	"io"
 	"log"
 	"net/http"
 	"os"
-	"strings"
 )
 
 func NewClient(metricAggregatorService string) *Client {
@@ -24,27 +22,27 @@ type Client struct {
 	loggerInfo              *log.Logger
 }
 
-func (c *Client) SendMetrics(metricType string, metricName string, metricValue string) {
-	url := c.MetricAggregatorService + getMetricAggregatorPath(metricType, metricName, metricValue)
+func (c *Client) SendMetrics(metricType, metricName, metricValue string) error {
+	url := c.getUpdateMetricUrl(metricType, metricName, metricValue)
 
 	c.loggerInfo.Printf("client are making request. url: %s\n", url)
-	post, err := http.Post(url, "text/plain", strings.NewReader(""))
+	post, err := http.Post(url, "text/plain", nil)
 
 	if err != nil {
 		c.loggerWarning.Printf("error while sending the metrics to server. Error: %s\n", err.Error())
+		return err
 	}
-	if post.StatusCode != 200 {
-		c.loggerWarning.Printf("error while sending the metrics to server. Status: %d\n", post.StatusCode)
+	defer post.Body.Close()
+
+	if post.StatusCode != http.StatusOK {
+		err = fmt.Errorf("error while sending the metrics to server. Status: %d\n", post.StatusCode)
+		c.loggerWarning.Printf(err.Error())
+		return err
 	}
 
-	defer post.Body.Close()
-	_, err = io.Copy(io.Discard, post.Body)
-	if err != nil {
-		panic(fmt.Errorf("cannot read the response body. url: %s", url))
-	}
+	return nil
 }
 
-func getMetricAggregatorPath(metricType string, metricName string, metricValue string) (path string) {
-	//tmpl := "/update/<ТИП_МЕТРИКИ>/<ИМЯ_МЕТРИКИ>/<ЗНАЧЕНИЕ_МЕТРИКИ>"
-	return fmt.Sprintf("/update/%s/%s/%s", metricType, metricName, metricValue)
+func (c *Client) getUpdateMetricUrl(metricType, metricName, metricValue string) (url string) {
+	return fmt.Sprintf("%s/update/%s/%s/%s", c.MetricAggregatorService, metricType, metricName, metricValue)
 }

@@ -58,28 +58,27 @@ type MetricGauge struct {
 	name  string
 }
 
+func (m MetricGauge) GetName() string {
+	return m.name
+}
+func (m MetricGauge) GetType() string {
+	return MetricTypeGauge
+}
+func (m MetricGauge) String() string {
+	return fmt.Sprintf("%f", m.value)
+}
+
 type MetricCounter struct {
-	value int
+	delta int
 	name  string
 }
 
 func (m MetricCounter) GetName() string {
 	return m.name
 }
-
-func (m MetricGauge) String() string {
-	return fmt.Sprintf("%f", m.value)
-}
-func (m MetricGauge) GetType() string {
-	return MetricTypeGauge
-}
-func (m MetricGauge) GetName() string {
-	return m.name
-}
-func (m MetricCounter) String() string {
-	return fmt.Sprintf("%d", m.value)
-}
-
 func (m MetricCounter) GetType() string {
 	return MetricTypeCounter
+}
+func (m MetricCounter) String() string {
+	return fmt.Sprintf("%d", m.delta)
 }

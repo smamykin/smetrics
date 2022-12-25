@@ -1,62 +1,55 @@
 package storage
 
 import (
+	"github.com/smamykin/smetrics/internal/server/handlers"
 	"log"
 	"os"
-	"time"
 )
 
 func NewMemStorage() *MemStorage {
 	return &MemStorage{
-		counterStore: map[string]CounterMetric{},
-		gaugeStore:   map[string]GaugeMetric{},
+		counterStore: map[string]handlers.CounterMetric{},
+		gaugeStore:   map[string]handlers.GaugeMetric{},
 		logger:       log.New(os.Stdout, "INFO:    ", log.Ldate|log.Ltime),
 	}
 }
 
-type metric struct {
-	Name     string
-	createAt time.Time
-}
-
-type GaugeMetric struct {
-	Value float64
-	metric
-}
-
-type CounterMetric struct {
-	Value int64
-	metric
-}
-
 type MemStorage struct {
-	gaugeStore   map[string]GaugeMetric
-	counterStore map[string]CounterMetric
+	gaugeStore   map[string]handlers.GaugeMetric
+	counterStore map[string]handlers.CounterMetric
 	logger       *log.Logger
 }
 
-func (m *MemStorage) GetAllGauge() []GaugeMetric {
-	var result []GaugeMetric
+func (m *MemStorage) GaugeStore() map[string]handlers.GaugeMetric {
+	return m.gaugeStore
+}
+
+func (m *MemStorage) CounterStore() map[string]handlers.CounterMetric {
+	return m.counterStore
+}
+
+func (m *MemStorage) GetAllGauge() ([]handlers.GaugeMetric, error) {
+	var result []handlers.GaugeMetric
 
 	for _, value := range m.gaugeStore {
 		result = append(result, value)
 	}
-	return result
+	return result, nil
 }
 
-func (m *MemStorage) GetAllCounters() []CounterMetric {
-	var result []CounterMetric
+func (m *MemStorage) GetAllCounters() ([]handlers.CounterMetric, error) {
+	var result []handlers.CounterMetric
 
 	for _, value := range m.counterStore {
 		result = append(result, value)
 	}
-	return result
+	return result, nil
 }
 
 func (m *MemStorage) GetGauge(name string) (float64, error) {
 	metric, ok := m.gaugeStore[name]
 	if !ok {
-		return .0, NotFoundError{"metric not found"}
+		return .0, handlers.MetricNotFoundError{}
 	}
 
 	return metric.Value, nil
@@ -65,17 +58,13 @@ func (m *MemStorage) GetGauge(name string) (float64, error) {
 func (m *MemStorage) GetCounter(name string) (int64, error) {
 	metric, ok := m.counterStore[name]
 	if !ok {
-		return .0, NotFoundError{"metric not found"}
+		return 0, handlers.MetricNotFoundError{}
 	}
 
 	return metric.Value, nil
 }
 
-func (m *MemStorage) UpsertGauge(name string, value float64) error {
-	metric := GaugeMetric{
-		value,
-		metric{name, time.Now()},
-	}
+func (m *MemStorage) UpsertGauge(metric handlers.GaugeMetric) error {
 	m.gaugeStore[metric.Name] = metric
 
 	m.logger.Printf("upsert %#v\n", metric)
@@ -83,19 +72,10 @@ func (m *MemStorage) UpsertGauge(name string, value float64) error {
 	return nil
 }
 
-func (m *MemStorage) UpsertCounter(name string, value int64) error {
-	metricInstance, ok := m.counterStore[name]
-	if !ok {
-		metricInstance = CounterMetric{
-			0,
-			metric{name, time.Now()},
-		}
-		m.counterStore[metricInstance.Name] = metricInstance
-	}
-	metricInstance.Value = metricInstance.Value + value
-	m.counterStore[name] = metricInstance
+func (m *MemStorage) UpsertCounter(metric handlers.CounterMetric) error {
+	m.counterStore[metric.Name] = metric
 
-	m.logger.Printf("upsert %#v\n", metricInstance)
+	m.logger.Printf("upsert %#v\n", metric)
 
 	return nil
 }

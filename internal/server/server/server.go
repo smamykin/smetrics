@@ -9,24 +9,24 @@ import (
 )
 
 func ListenAndServ() {
-	r := NewRouter()
+	memStorage := storage.NewMemStorage()
+	r := NewRouter(memStorage)
 	log.Println("Starting the server.")
 	err := http.ListenAndServe("127.0.0.1:8080", r)
 	panic(err)
 }
 
-func NewRouter() chi.Router {
+func NewRouter(repository handlers.IRepository) chi.Router {
 	r := chi.NewRouter()
 
-	memStorage := storage.NewMemStorage()
 	r.Method("POST", "/update/{metricType}/{metricName}/{metricValue}", &handlers.UpdateHandler{
-		Repository: memStorage,
+		Repository: repository,
 	})
 	r.Method("GET", "/value/{metricType}/{metricName}", &handlers.GetHandler{
-		Repository: memStorage,
+		Repository: repository,
 	})
 	r.Method("GET", "/", &handlers.ListHandler{
-		Repository: memStorage,
+		Repository: repository,
 	})
 
 	return r

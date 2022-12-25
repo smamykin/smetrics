@@ -1,20 +1,10 @@
 package handlers
 
 import (
-	"github.com/smamykin/smetrics/internal/server/storage"
+	"github.com/go-chi/chi/v5"
 	"net/http"
 	"strconv"
-	"strings"
 )
-
-type IRepository interface {
-	UpsertGauge(name string, value float64) error
-	UpsertCounter(name string, value int64) error
-	GetGauge(name string) (float64, error)
-	GetCounter(name string) (int64, error)
-	GetAllGauge() []storage.GaugeMetric
-	GetAllCounters() []storage.CounterMetric
-}
 
 type UpdateHandler struct {
 	Repository IRepository
@@ -24,19 +14,14 @@ func (u *UpdateHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	var err error
 	w.Header().Set("Content-Type", "text/plain")
 
-	pathElements := strings.Split(r.URL.Path, "/")
-	if r.Method != "POST" || len(pathElements) != 5 {
-		http.Error(w, "Not found", http.StatusNotFound)
-		return
-	}
-	metricType := pathElements[2]
-	metricName := pathElements[3]
-	metricValue := pathElements[4]
+	metricType := chi.URLParam(r, "metricType")
+	metricName := chi.URLParam(r, "metricName")
+	metricValue := chi.URLParam(r, "metricValue")
 
 	switch metricType {
-	case "gauge":
+	case metricTypeGauge:
 		err = u.upsertGauge(metricName, metricValue)
-	case "counter":
+	case metricTypeCounter:
 		err = u.upsertCounter(metricName, metricValue)
 	default:
 		http.Error(w, "metric type is incorrect", http.StatusNotImplemented)
@@ -55,7 +40,9 @@ func (u *UpdateHandler) upsertCounter(metricName string, metricValue string) err
 		return err
 	}
 
-	return u.Repository.UpsertCounter(metricName, value)
+	prevValue, _ := u.Repository.GetCounter(metricName)
+
+	return u.Repository.UpsertCounter(CounterMetric{Name: metricName, Value: prevValue + value})
 }
 
 func (u *UpdateHandler) upsertGauge(metricName string, metricValue string) error {
@@ -65,5 +52,5 @@ func (u *UpdateHandler) upsertGauge(metricName string, metricValue string) error
 		return err
 	}
 
-	return u.Repository.UpsertGauge(metricName, value)
+	return u.Repository.UpsertGauge(GaugeMetric{Name: metricName, Value: value})
 }

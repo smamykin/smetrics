@@ -57,13 +57,14 @@ type apiClientMock struct {
 	t            *testing.T
 }
 
-func (a *apiClientMock) SendMetrics(metricType string, metricName string, metricValue string) {
+func (a *apiClientMock) SendMetrics(metricType string, metricName string, metricValue string) error {
 	assert.Equal(a.t, a.expectedArgs[a.invokedTimes], metricMock{
 		metricValue,
 		metricType,
 		metricName,
 	})
 	a.invokedTimes++
+	return nil
 }
 
 type providerMock struct {

@@ -3,7 +3,6 @@ package handlers
 import (
 	"fmt"
 	"github.com/go-chi/chi/v5"
-	"github.com/smamykin/smetrics/internal/server/storage"
 	"net/http"
 )
 
@@ -19,14 +18,14 @@ func (g *GetHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	metricName := chi.URLParam(r, "metricName")
 
 	switch metricType {
-	case "gauge":
+	case metricTypeGauge:
 		var value float64
 		value, err = g.Repository.GetGauge(metricName)
 		if err == nil {
 			w.Write([]byte(fmt.Sprintf("%.3f", value)))
 			return
 		}
-	case "counter":
+	case metricTypeCounter:
 		var value int64
 		value, err = g.Repository.GetCounter(metricName)
 		if err == nil {
@@ -38,7 +37,7 @@ func (g *GetHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if _, ok := err.(storage.NotFoundError); ok {
+	if _, ok := err.(MetricNotFoundError); ok {
 		http.Error(w, err.Error(), http.StatusNotFound)
 		return
 	}

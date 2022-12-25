@@ -9,7 +9,7 @@ type IMetric interface {
 }
 
 type IClient interface {
-	SendMetrics(metricType string, metricName string, metricValue string)
+	SendMetrics(metricType, metricName, metricValue string) error
 }
 
 type IMetricProvider interface {
