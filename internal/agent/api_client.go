@@ -35,8 +35,8 @@ func (c *Client) SendMetrics(metricType, metricName, metricValue string) error {
 	defer post.Body.Close()
 
 	if post.StatusCode != http.StatusOK {
-		err = fmt.Errorf("error while sending the metrics to server. Status: %d\n", post.StatusCode)
-		c.loggerWarning.Printf(err.Error())
+		err = fmt.Errorf("error while sending the metrics to server. Status: %d", post.StatusCode)
+		c.loggerWarning.Println(err.Error())
 		return err
 	}
 
