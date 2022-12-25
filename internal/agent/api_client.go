@@ -23,7 +23,7 @@ type Client struct {
 }
 
 func (c *Client) SendMetrics(metricType, metricName, metricValue string) error {
-	url := c.getUpdateMetricUrl(metricType, metricName, metricValue)
+	url := c.getUpdateMetricURL(metricType, metricName, metricValue)
 
 	c.loggerInfo.Printf("client are making request. url: %s\n", url)
 	post, err := http.Post(url, "text/plain", nil)
@@ -43,6 +43,6 @@ func (c *Client) SendMetrics(metricType, metricName, metricValue string) error {
 	return nil
 }
 
-func (c *Client) getUpdateMetricUrl(metricType, metricName, metricValue string) (url string) {
+func (c *Client) getUpdateMetricURL(metricType, metricName, metricValue string) (url string) {
 	return fmt.Sprintf("%s/update/%s/%s/%s", c.MetricAggregatorService, metricType, metricName, metricValue)
 }
