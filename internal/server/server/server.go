@@ -20,7 +20,8 @@ func NewRouter(repository handlers.IRepository) chi.Router {
 	r := chi.NewRouter()
 
 	r.Method("POST", "/update/{metricType}/{metricName}/{metricValue}", &handlers.UpdateHandler{
-		Repository: repository,
+		Repository:    repository,
+		ParametersBag: ParameterBag{},
 	})
 	r.Method("GET", "/value/{metricType}/{metricName}", &handlers.GetHandler{
 		Repository: repository,
@@ -29,5 +30,18 @@ func NewRouter(repository handlers.IRepository) chi.Router {
 		Repository: repository,
 	})
 
+	//region JSON-API
+	r.Method("POST", "/update/", &handlers.UpdateHandler{
+		Repository:    repository,
+		ParametersBag: ParameterBag{},
+	})
+	//endregion
+
 	return r
+}
+
+type ParameterBag struct{}
+
+func (p ParameterBag) GetUrlParam(r *http.Request, key string) string {
+	return chi.URLParam(r, key)
 }
