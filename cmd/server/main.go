@@ -1,3 +1,7 @@
 package main
 
-func main() {}
+import "github.com/smamykin/smetrics/internal/server/server"
+
+func main() {
+	server.ListenAndServ()
+}
