@@ -19,22 +19,20 @@ func ListenAndServ() {
 func NewRouter(repository handlers.IRepository) chi.Router {
 	r := chi.NewRouter()
 
-	r.Method("POST", "/update/{metricType}/{metricName}/{metricValue}", &handlers.UpdateHandler{
-		Repository:    repository,
-		ParametersBag: ParameterBag{},
-	})
-	r.Method("GET", "/value/{metricType}/{metricName}", &handlers.GetHandler{
-		Repository: repository,
-	})
+	r.Method("POST", "/update/{metricType}/{metricName}/{metricValue}", handlers.NewUpdateHandler(
+		repository,
+		ParameterBag{},
+	))
+	r.Method("GET", "/value/{metricType}/{metricName}", handlers.NewGetHandler(
+		repository,
+		ParameterBag{},
+	))
 	r.Method("GET", "/", &handlers.ListHandler{
 		Repository: repository,
 	})
 
 	//region JSON-API
-	r.Method("POST", "/update/", &handlers.UpdateHandler{
-		Repository:    repository,
-		ParametersBag: ParameterBag{},
-	})
+	r.Method("POST", "/update/", handlers.NewUpdateHandler(repository, ParameterBag{}))
 	//endregion
 
 	return r

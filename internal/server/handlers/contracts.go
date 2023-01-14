@@ -7,6 +7,12 @@ const (
 	metricTypeCounter = "counter"
 )
 
+const (
+	paramNameMetricType  = "metricType"
+	paramNameMetricName  = "metricName"
+	paramNameMetricValue = "metricValue"
+)
+
 type IRepository interface {
 	UpsertGauge(GaugeMetric) error
 	UpsertCounter(CounterMetric) error

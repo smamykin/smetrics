@@ -2,21 +2,17 @@ package handlers
 
 import (
 	"encoding/json"
-	"errors"
-	"io"
 	"net/http"
-	"strconv"
-)
-
-const (
-	paramNameMetricType  = "metricType"
-	paramNameMetricName  = "metricName"
-	paramNameMetricValue = "metricValue"
 )
 
 type UpdateHandler struct {
-	Repository    IRepository
-	ParametersBag IParametersBag
+	*Handler
+}
+
+func NewUpdateHandler(repository IRepository, parameterBag IParametersBag) *UpdateHandler {
+	return &UpdateHandler{
+		&Handler{repository, parameterBag},
+	}
 }
 
 func (u *UpdateHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
@@ -48,52 +44,6 @@ func (u *UpdateHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-}
-
-func (u *UpdateHandler) handleHeaders(w http.ResponseWriter, r *http.Request) {
-	headerAccept := r.Header.Get("Accept")
-
-	if headerAccept != "" {
-		w.Header().Set("Content-Type", headerAccept)
-	} else {
-		w.Header().Set("Content-Type", "text/plain")
-	}
-	return
-}
-
-func (u *UpdateHandler) getMetricFromRequest(r *http.Request) (metric Metrics, err error) {
-	if r.Header.Get("Content-Type") == "application/json" {
-		var body []byte
-
-		defer r.Body.Close()
-		body, err = io.ReadAll(r.Body)
-		if err != nil {
-			return
-		}
-
-		err = json.Unmarshal(body, &metric)
-
-		return
-	}
-
-	metric.MType = u.ParametersBag.GetUrlParam(r, paramNameMetricType)
-	metric.ID = u.ParametersBag.GetUrlParam(r, paramNameMetricName)
-	metricValue := u.ParametersBag.GetUrlParam(r, paramNameMetricValue)
-
-	switch metric.MType {
-	case metricTypeGauge:
-		var value float64
-		value, err = strconv.ParseFloat(metricValue, 64)
-		metric.Value = &value
-	case metricTypeCounter:
-		var delta int64
-		delta, err = strconv.ParseInt(metricValue, 10, 64)
-		metric.Delta = &delta
-	default:
-		err = errors.New("unknown metric type")
-	}
-
-	return
 }
 
 func (u *UpdateHandler) upsert(metric Metrics) (err error) {

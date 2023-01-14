@@ -7,15 +7,22 @@ import (
 )
 
 type GetHandler struct {
-	Repository IRepository
+	*Handler
+}
+
+func NewGetHandler(repository IRepository, parameterBag IParametersBag) *GetHandler {
+	return &GetHandler{&Handler{
+		repository,
+		parameterBag,
+	}}
 }
 
 func (g *GetHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	var err error
 	w.Header().Set("Content-Type", "text/plain")
 
-	metricType := chi.URLParam(r, "metricType")
-	metricName := chi.URLParam(r, "metricName")
+	metricType := chi.URLParam(r, paramNameMetricType)
+	metricName := chi.URLParam(r, paramNameMetricName)
 
 	switch metricType {
 	case metricTypeGauge:
