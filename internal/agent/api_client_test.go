@@ -3,6 +3,7 @@ package agent
 import (
 	"fmt"
 	"github.com/stretchr/testify/require"
+	"io"
 	"log"
 	"math/rand"
 	"net/http"
@@ -16,8 +17,9 @@ func TestClient_SendMetrics(t *testing.T) {
 	value := rand.Int()
 	handler := handlerForTest{
 		expectedMethod:      "POST",
-		expectedPath:        fmt.Sprintf("/update/metricTypeTest/metricNameTest/%d", value),
-		expectedContentType: "text/plain",
+		expectedPath:        "/update/",
+		expectedContentType: "application/json",
+		expectedBody:        fmt.Sprintf(`{"id":"metricNameTest","type":"counter","delta":%d}`, value),
 		t:                   t,
 	}
 	server := httptest.NewServer(&handler)
@@ -28,7 +30,7 @@ func TestClient_SendMetrics(t *testing.T) {
 		log.New(writerMock{}, "test: ", log.Ldate|log.Ltime),
 		log.New(writerMock{}, "test: ", log.Ldate|log.Ltime),
 	}
-	client.SendMetrics("metricTypeTest", "metricNameTest", strconv.Itoa(value))
+	client.SendMetrics("counter", "metricNameTest", strconv.Itoa(value))
 
 	require.True(t, handler.isInvoked)
 }
@@ -38,6 +40,7 @@ type handlerForTest struct {
 	expectedMethod      string
 	expectedPath        string
 	expectedContentType string
+	expectedBody        string
 	isInvoked           bool
 }
 
@@ -46,6 +49,12 @@ func (h *handlerForTest) ServeHTTP(writer http.ResponseWriter, request *http.Req
 	require.Equal(h.t, h.expectedMethod, request.Method)
 	require.Equal(h.t, h.expectedContentType, request.Header.Get("Content-Type"))
 	require.Equal(h.t, h.expectedPath, request.URL.Path)
+	defer request.Body.Close()
+	body, err := io.ReadAll(request.Body)
+	if err != nil {
+		return
+	}
+	require.Equal(h.t, h.expectedBody, string(body))
 }
 
 type writerMock struct {

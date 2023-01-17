@@ -1,10 +1,13 @@
 package agent
 
 import (
+	"bytes"
+	"encoding/json"
 	"fmt"
 	"log"
 	"net/http"
 	"os"
+	"strconv"
 )
 
 func NewClient(metricAggregatorService string) *Client {
@@ -23,10 +26,16 @@ type Client struct {
 }
 
 func (c *Client) SendMetrics(metricType, metricName, metricValue string) error {
-	url := c.getUpdateMetricURL(metricType, metricName, metricValue)
 
-	c.loggerInfo.Printf("client are making request. url: %s\n", url)
-	post, err := http.Post(url, "text/plain", nil)
+	body, err := c.getUpdateMetrics(metricType, metricName, metricValue)
+	if err != nil {
+		c.loggerWarning.Printf("error while sending the metrics to server. Error: %s\n", err.Error())
+		return err
+	}
+
+	c.loggerInfo.Printf("client are making request. url: %s, body: %s \n", "/update/", string(body))
+	url := fmt.Sprintf("%s/update/", c.MetricAggregatorService)
+	post, err := http.Post(url, "application/json", bytes.NewReader(body))
 
 	if err != nil {
 		c.loggerWarning.Printf("error while sending the metrics to server. Error: %s\n", err.Error())
@@ -43,6 +52,34 @@ func (c *Client) SendMetrics(metricType, metricName, metricValue string) error {
 	return nil
 }
 
-func (c *Client) getUpdateMetricURL(metricType, metricName, metricValue string) (url string) {
-	return fmt.Sprintf("%s/update/%s/%s/%s", c.MetricAggregatorService, metricType, metricName, metricValue)
+func (c *Client) getUpdateMetrics(metricType, metricName, metricValue string) (body []byte, err error) {
+	metrics := Metrics{
+		MType: metricType,
+		ID:    metricName,
+	}
+	if metrics.MType == MetricTypeGauge {
+		value, err := strconv.ParseFloat(metricValue, 64)
+		if err != nil {
+			return body, err
+		}
+		metrics.Value = &value
+	}
+	if metrics.MType == MetricTypeCounter {
+		value, err := strconv.ParseInt(metricValue, 10, 64)
+		if err != nil {
+			return body, err
+		}
+		metrics.Delta = &value
+	}
+
+	body, err = json.Marshal(metrics)
+
+	return body, err
+}
+
+type Metrics struct {
+	ID    string   `json:"id"`              // имя метрики
+	MType string   `json:"type"`            // параметр, принимающий значение gauge или counter
+	Delta *int64   `json:"delta,omitempty"` // значение метрики в случае передачи counter
+	Value *float64 `json:"value,omitempty"` // значение метрики в случае передачи gauge
 }
