@@ -33,12 +33,12 @@ func (h *Handler) getMetricFromRequest(r *http.Request) (metric Metrics, err err
 		return
 	}
 
-	metric, err = h.getMetricFromUrl(r)
+	metric, err = h.getMetricFromURL(r)
 	if err != nil {
 		return
 	}
 
-	metricValue := h.ParametersBag.GetUrlParam(r, paramNameMetricValue)
+	metricValue := h.ParametersBag.GetURLParam(r, paramNameMetricValue)
 	if metricValue == "" {
 		return
 	}
@@ -80,11 +80,11 @@ func (h *Handler) getMetricsFromJson(r *http.Request) (metric Metrics, err error
 	return
 }
 
-func (h *Handler) getMetricFromUrl(r *http.Request) (metric Metrics, err error) {
-	metric.MType = h.ParametersBag.GetUrlParam(r, paramNameMetricType)
-	metric.ID = h.ParametersBag.GetUrlParam(r, paramNameMetricName)
+func (h *Handler) getMetricFromURL(r *http.Request) (metric Metrics, err error) {
+	metric.MType = h.ParametersBag.GetURLParam(r, paramNameMetricType)
+	metric.ID = h.ParametersBag.GetURLParam(r, paramNameMetricName)
 
-	metricValue := h.ParametersBag.GetUrlParam(r, paramNameMetricValue)
+	metricValue := h.ParametersBag.GetURLParam(r, paramNameMetricValue)
 	if metricValue == "" {
 		return
 	}

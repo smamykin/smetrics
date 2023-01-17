@@ -119,7 +119,7 @@ type ParametersBagMock struct {
 	parameters map[string]string
 }
 
-func (p ParametersBagMock) GetUrlParam(r *http.Request, key string) string {
+func (p ParametersBagMock) GetURLParam(r *http.Request, key string) string {
 	return p.parameters[key]
 }
 

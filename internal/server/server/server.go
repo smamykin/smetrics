@@ -41,6 +41,6 @@ func NewRouter(repository handlers.IRepository) chi.Router {
 
 type ParameterBag struct{}
 
-func (p ParameterBag) GetUrlParam(r *http.Request, key string) string {
+func (p ParameterBag) GetURLParam(r *http.Request, key string) string {
 	return chi.URLParam(r, key)
 }
