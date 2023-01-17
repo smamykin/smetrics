@@ -29,7 +29,7 @@ func (h *Handler) handleHeaders(w http.ResponseWriter, r *http.Request) {
 
 func (h *Handler) getMetricFromRequest(r *http.Request) (metric Metrics, err error) {
 	if r.Header.Get("Content-Type") == "application/json" {
-		metric, err = h.getMetricsFromJson(r)
+		metric, err = h.getMetricsFromJSON(r)
 		return
 	}
 
@@ -37,7 +37,7 @@ func (h *Handler) getMetricFromRequest(r *http.Request) (metric Metrics, err err
 	return
 }
 
-func (h *Handler) getMetricsFromJson(r *http.Request) (metric Metrics, err error) {
+func (h *Handler) getMetricsFromJSON(r *http.Request) (metric Metrics, err error) {
 	var body []byte
 
 	defer r.Body.Close()

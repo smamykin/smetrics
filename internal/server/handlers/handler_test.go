@@ -29,7 +29,7 @@ func TestGetMetricFromRequest(t *testing.T) {
 		Value: &expectedValue,
 	}
 	tests["json. update for gauge"] = testCase{
-		request:       newJsonRequest(expected),
+		request:       newJSONRequest(expected),
 		updateHandler: NewUpdateHandler(RepositoryMock{}, ParametersBagMock{}),
 		expected:      expected,
 	}
@@ -54,7 +54,7 @@ func TestGetMetricFromRequest(t *testing.T) {
 		Delta: &expectedDelta,
 	}
 	tests["json. update for counter"] = testCase{
-		request:       newJsonRequest(expected),
+		request:       newJSONRequest(expected),
 		updateHandler: NewUpdateHandler(RepositoryMock{}, ParametersBagMock{}),
 		expected:      expected,
 	}
@@ -78,7 +78,7 @@ func TestGetMetricFromRequest(t *testing.T) {
 		ID:    "metric_name3",
 	}
 	tests["json. get for gauge"] = testCase{
-		request:       newJsonRequest(expected),
+		request:       newJSONRequest(expected),
 		updateHandler: NewUpdateHandler(RepositoryMock{}, ParametersBagMock{}),
 		expected:      expected,
 	}
@@ -105,7 +105,7 @@ func TestGetMetricFromRequest(t *testing.T) {
 
 }
 
-func newJsonRequest(expected Metrics) *http.Request {
+func newJSONRequest(expected Metrics) *http.Request {
 	body, _ := json.Marshal(expected)
 	return &http.Request{
 		Header: map[string][]string{
