@@ -23,7 +23,6 @@ func (h *Handler) handleHeaders(w http.ResponseWriter, r *http.Request) {
 	} else {
 		w.Header().Set("Content-Type", "text/plain")
 	}
-	return
 }
 
 func (h *Handler) getMetricFromRequest(r *http.Request) (metric Metrics, err error) {
