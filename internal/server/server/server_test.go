@@ -83,6 +83,18 @@ func TestRouter(t *testing.T) {
 				gaugeStore:   map[string]handlers.GaugeMetric{},
 			},
 		},
+		"invalid counter value": {
+			requests: []requestDefinition{
+				{method: http.MethodPost, url: "/update/counter/metric_name/none"},
+			},
+			expected: expected{
+				contentType:  "text/plain; charset=utf-8",
+				statusCode:   http.StatusBadRequest,
+				body:         "strconv.ParseInt: parsing \"none\": invalid syntax\n",
+				counterStore: map[string]handlers.CounterMetric{},
+				gaugeStore:   map[string]handlers.GaugeMetric{},
+			},
+		},
 		"the first update of gauge": {
 			requests: []requestDefinition{
 				{method: http.MethodPost, url: "/update/gauge/metric_name/43.332"},

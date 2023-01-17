@@ -24,7 +24,7 @@ type IRepository interface {
 	GetAllCounters() ([]CounterMetric, error)
 }
 type IParametersBag interface {
-	GetUrlParam(r *http.Request, key string) string
+	GetURLParam(r *http.Request, key string) string
 }
 
 type Metrics struct {

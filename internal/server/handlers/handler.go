@@ -34,30 +34,6 @@ func (h *Handler) getMetricFromRequest(r *http.Request) (metric Metrics, err err
 	}
 
 	metric, err = h.getMetricFromURL(r)
-	if err != nil {
-		return
-	}
-
-	metricValue := h.ParametersBag.GetURLParam(r, paramNameMetricValue)
-	if metricValue == "" {
-		return
-	}
-
-	switch metric.MType {
-	case metricTypeGauge:
-		var value float64
-		value, err = strconv.ParseFloat(metricValue, 64)
-		metric.Value = &value
-	case metricTypeCounter:
-		var delta int64
-		delta, err = strconv.ParseInt(metricValue, 10, 64)
-		metric.Delta = &delta
-	default:
-		err = errors.New("unknown metric type")
-		return
-	}
-
-	_, err = valid.ValidateStruct(&metric)
 	return
 }
 
@@ -100,6 +76,10 @@ func (h *Handler) getMetricFromURL(r *http.Request) (metric Metrics, err error) 
 		metric.Delta = &delta
 	default:
 		err = errors.New("unknown metric type")
+		return
+	}
+
+	if err != nil {
 		return
 	}
 
