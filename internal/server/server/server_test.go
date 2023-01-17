@@ -217,7 +217,7 @@ func TestRouter(t *testing.T) {
 			expected: expected{
 				contentType:  "application/json",
 				statusCode:   http.StatusOK,
-				body:         `{"id":"metric_name3","type":"gauge","value":24}`,
+				body:         `{"id":"metric_name3","type":"gauge","delta":24}`,
 				counterStore: map[string]handlers.CounterMetric{"metric_name3": {Value: 24, Name: "metric_name3"}},
 				gaugeStore:   map[string]handlers.GaugeMetric{},
 			},
@@ -243,7 +243,7 @@ func TestRouter(t *testing.T) {
 			expected: expected{
 				contentType:  "application/json",
 				statusCode:   http.StatusOK,
-				body:         `{"id":"metric_name3","type":"gauge","value":11}`,
+				body:         `{"id":"metric_name3","type":"gauge","delta":11}`,
 				counterStore: map[string]handlers.CounterMetric{"metric_name3": {Value: 11, Name: "metric_name3"}},
 				gaugeStore:   map[string]handlers.GaugeMetric{},
 			},
