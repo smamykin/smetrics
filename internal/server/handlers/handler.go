@@ -97,7 +97,7 @@ func (h *Handler) handleBody(w http.ResponseWriter, metric Metrics, acceptHeader
 		}
 		actualMetric = Metrics{
 			ID:    metric.ID,
-			MType: metricTypeGauge,
+			MType: metricTypeCounter,
 			Delta: &v,
 		}
 	case metricTypeGauge:
