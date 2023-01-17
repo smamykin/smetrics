@@ -22,13 +22,12 @@ func (u *UpdateHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	metric, err := u.getMetricFromRequest(r)
 
 	if err != nil {
-		if "unknown metric type" == err.Error() {
+		if err.Error() == "unknown metric type" {
 			http.Error(w, err.Error(), http.StatusNotImplemented)
 			return
 		}
 
 		http.Error(w, err.Error(), http.StatusBadRequest)
-
 		return
 	}
 

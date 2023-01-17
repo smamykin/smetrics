@@ -6,7 +6,6 @@ import (
 	"fmt"
 	valid "github.com/asaskevich/govalidator"
 	"io"
-	"math"
 	"net/http"
 	"strconv"
 )
@@ -97,12 +96,10 @@ func (h *Handler) handleBody(w http.ResponseWriter, metric Metrics, acceptHeader
 		if err != nil {
 			return err
 		}
-		value := float64(v)
-
 		actualMetric = Metrics{
 			ID:    metric.ID,
 			MType: metricTypeGauge,
-			Value: &value,
+			Delta: &v,
 		}
 	case metricTypeGauge:
 		v, err := h.Repository.GetGauge(metric.ID)
@@ -129,8 +126,11 @@ func (h *Handler) handleBody(w http.ResponseWriter, metric Metrics, acceptHeader
 		return nil
 	}
 
-	roundedValue := math.Round(*actualMetric.Value*1000) / 1000
-	w.Write([]byte(fmt.Sprintf("%v", roundedValue)))
+	if actualMetric.Value != nil {
+		w.Write([]byte(fmt.Sprintf("%.3f", *actualMetric.Value)))
+	} else {
+		w.Write([]byte(fmt.Sprintf("%d", *actualMetric.Delta)))
+	}
 
 	return nil
 }
