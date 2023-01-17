@@ -33,6 +33,7 @@ func NewRouter(repository handlers.IRepository) chi.Router {
 
 	//region JSON-API
 	r.Method("POST", "/update/", handlers.NewUpdateHandler(repository, ParameterBag{}))
+	r.Method("POST", "/value/", handlers.NewGetHandler(repository, ParameterBag{}))
 	//endregion
 
 	return r

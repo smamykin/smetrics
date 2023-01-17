@@ -1,8 +1,6 @@
 package handlers
 
 import (
-	"fmt"
-	"github.com/go-chi/chi/v5"
 	"net/http"
 )
 
@@ -19,28 +17,25 @@ func NewGetHandler(repository IRepository, parameterBag IParametersBag) *GetHand
 
 func (g *GetHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	var err error
-	w.Header().Set("Content-Type", "text/plain")
+	var metric Metrics
 
-	metricType := chi.URLParam(r, paramNameMetricType)
-	metricName := chi.URLParam(r, paramNameMetricName)
+	g.handleHeaders(w, r)
+	metric, err = g.getMetricFromRequest(r)
 
-	switch metricType {
-	case metricTypeGauge:
-		var value float64
-		value, err = g.Repository.GetGauge(metricName)
-		if err == nil {
-			w.Write([]byte(fmt.Sprintf("%.3f", value)))
+	if err != nil {
+		if "unknown metric type" == err.Error() {
+			http.Error(w, err.Error(), http.StatusNotImplemented)
 			return
 		}
-	case metricTypeCounter:
-		var value int64
-		value, err = g.Repository.GetCounter(metricName)
-		if err == nil {
-			w.Write([]byte(fmt.Sprintf("%d", value)))
-			return
-		}
-	default:
-		http.Error(w, "metric type is incorrect", http.StatusNotImplemented)
+
+		http.Error(w, err.Error(), http.StatusBadRequest)
+
+		return
+	}
+
+	err = g.handleBody(w, metric, r.Header.Get("Accept"))
+
+	if err == nil {
 		return
 	}
 
@@ -49,5 +44,5 @@ func (g *GetHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	http.Error(w, err.Error(), http.StatusBadRequest)
+	http.Error(w, err.Error(), http.StatusInternalServerError)
 }

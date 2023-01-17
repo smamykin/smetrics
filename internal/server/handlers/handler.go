@@ -3,8 +3,10 @@ package handlers
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 	valid "github.com/asaskevich/govalidator"
 	"io"
+	"math"
 	"net/http"
 	"strconv"
 )
@@ -104,4 +106,51 @@ func (h *Handler) getMetricFromUrl(r *http.Request) (metric Metrics, err error) 
 	_, err = valid.ValidateStruct(&metric)
 
 	return
+}
+
+func (h *Handler) handleBody(w http.ResponseWriter, metric Metrics, acceptHeader string) (err error) {
+	var actualMetric Metrics
+
+	switch metric.MType {
+	case metricTypeCounter:
+		v, err := h.Repository.GetCounter(metric.ID)
+		if err != nil {
+			return err
+		}
+		value := float64(v)
+
+		actualMetric = Metrics{
+			ID:    metric.ID,
+			MType: metricTypeGauge,
+			Value: &value,
+		}
+	case metricTypeGauge:
+		v, err := h.Repository.GetGauge(metric.ID)
+		if err != nil {
+			return err
+		}
+		actualMetric = Metrics{
+			ID:    metric.ID,
+			MType: metricTypeGauge,
+			Value: &v,
+		}
+	default:
+		return errors.New("trying to get metric with unknown type, there is an error in logic of checking request")
+	}
+
+	if acceptHeader == "application/json" {
+		body, err := json.Marshal(actualMetric)
+		if err != nil {
+			return err
+		}
+
+		w.Write(body)
+
+		return nil
+	}
+
+	roundedValue := math.Round(*actualMetric.Value*1000) / 1000
+	w.Write([]byte(fmt.Sprintf("%v", roundedValue)))
+
+	return nil
 }

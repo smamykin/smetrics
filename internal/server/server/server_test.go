@@ -65,7 +65,7 @@ func TestRouter(t *testing.T) {
 			expected: expected{
 				contentType:  "text/plain",
 				statusCode:   http.StatusOK,
-				body:         "",
+				body:         "43",
 				counterStore: map[string]handlers.CounterMetric{"metric_name": {Value: 43, Name: "metric_name"}},
 				gaugeStore:   map[string]handlers.GaugeMetric{},
 			},
@@ -78,7 +78,7 @@ func TestRouter(t *testing.T) {
 			expected: expected{
 				contentType:  "text/plain",
 				statusCode:   http.StatusOK,
-				body:         "",
+				body:         "50",
 				counterStore: map[string]handlers.CounterMetric{"metric_name": {Value: 50, Name: "metric_name"}},
 				gaugeStore:   map[string]handlers.GaugeMetric{},
 			},
@@ -90,7 +90,7 @@ func TestRouter(t *testing.T) {
 			expected: expected{
 				contentType:  "text/plain",
 				statusCode:   http.StatusOK,
-				body:         "",
+				body:         "43.332",
 				counterStore: map[string]handlers.CounterMetric{},
 				gaugeStore:   map[string]handlers.GaugeMetric{"metric_name": {Value: 43.332, Name: "metric_name"}},
 			},
@@ -103,7 +103,7 @@ func TestRouter(t *testing.T) {
 			expected: expected{
 				contentType:  "text/plain",
 				statusCode:   http.StatusOK,
-				body:         "",
+				body:         "50.111",
 				counterStore: map[string]handlers.CounterMetric{},
 				gaugeStore:   map[string]handlers.GaugeMetric{"metric_name": {Value: 50.111, Name: "metric_name"}},
 			},
@@ -184,7 +184,7 @@ func TestRouter(t *testing.T) {
 				gaugeStore:   map[string]handlers.GaugeMetric{"metric_name2": {Value: 50.111, Name: "metric_name2"}},
 			},
 		},
-		"JSON-API update": {
+		"JSON-API update gauge": {
 			requests: []requestDefinition{
 				{method: http.MethodPost, url: "/update/", body: `{"id":"metric_name3", "type":"gauge", "value":11.12}`, contentType: "application/json"},
 				{method: http.MethodPost, url: "/update/", body: `{"id":"metric_name3", "type":"gauge", "value":13.14}`, contentType: "application/json"},
@@ -195,6 +195,45 @@ func TestRouter(t *testing.T) {
 				body:         `{"id":"metric_name3","type":"gauge","value":13.14}`,
 				counterStore: map[string]handlers.CounterMetric{},
 				gaugeStore:   map[string]handlers.GaugeMetric{"metric_name3": {Value: 13.14, Name: "metric_name3"}},
+			},
+		},
+		"JSON-API update counter": {
+			requests: []requestDefinition{
+				{method: http.MethodPost, url: "/update/", body: `{"id":"metric_name3", "type":"counter", "delta":11}`, contentType: "application/json"},
+				{method: http.MethodPost, url: "/update/", body: `{"id":"metric_name3", "type":"counter", "delta":13}`, contentType: "application/json"},
+			},
+			expected: expected{
+				contentType:  "application/json",
+				statusCode:   http.StatusOK,
+				body:         `{"id":"metric_name3","type":"gauge","value":24}`,
+				counterStore: map[string]handlers.CounterMetric{"metric_name3": {Value: 24, Name: "metric_name3"}},
+				gaugeStore:   map[string]handlers.GaugeMetric{},
+			},
+		},
+		"JSON-API get gauge": {
+			requests: []requestDefinition{
+				{method: http.MethodPost, url: "/update/", body: `{"id":"metric_name3", "type":"gauge", "value":11.12}`, contentType: "application/json"},
+				{method: http.MethodPost, url: "/value/", body: `{"id":"metric_name3", "type":"gauge"}`, contentType: "application/json"},
+			},
+			expected: expected{
+				contentType:  "application/json",
+				statusCode:   http.StatusOK,
+				body:         `{"id":"metric_name3","type":"gauge","value":11.12}`,
+				counterStore: map[string]handlers.CounterMetric{},
+				gaugeStore:   map[string]handlers.GaugeMetric{"metric_name3": {Value: 11.12, Name: "metric_name3"}},
+			},
+		},
+		"JSON-API get counter": {
+			requests: []requestDefinition{
+				{method: http.MethodPost, url: "/update/", body: `{"id":"metric_name3", "type":"counter", "delta":11}`, contentType: "application/json"},
+				{method: http.MethodPost, url: "/value/", body: `{"id":"metric_name3", "type":"counter"}`, contentType: "application/json"},
+			},
+			expected: expected{
+				contentType:  "application/json",
+				statusCode:   http.StatusOK,
+				body:         `{"id":"metric_name3","type":"gauge","value":11}`,
+				counterStore: map[string]handlers.CounterMetric{"metric_name3": {Value: 11, Name: "metric_name3"}},
+				gaugeStore:   map[string]handlers.GaugeMetric{},
 			},
 		},
 	}

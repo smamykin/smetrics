@@ -1,7 +1,7 @@
 package handlers
 
 import (
-	"encoding/json"
+	"errors"
 	"net/http"
 )
 
@@ -57,47 +57,5 @@ func (u *UpdateHandler) upsert(metric Metrics) (err error) {
 		return u.Repository.UpsertCounter(CounterMetric{Name: metric.ID, Value: prevValue + *metric.Delta})
 	}
 
-	panic("trying to upsert metric with unknown type, there is an error in logic of checking request")
-}
-
-func (u *UpdateHandler) handleBody(w http.ResponseWriter, metric Metrics, acceptHeader string) (err error) {
-	var actualMetric Metrics
-	if acceptHeader == "application/json" {
-		switch metric.MType {
-		case metricTypeCounter:
-			v, err := u.Repository.GetCounter(metric.ID)
-			if err != nil {
-				return err
-			}
-			value := float64(v)
-
-			actualMetric = Metrics{
-				ID:    metric.ID,
-				MType: metricTypeGauge,
-				Value: &value,
-			}
-		case metricTypeGauge:
-			value, err := u.Repository.GetGauge(metric.ID)
-			if err != nil {
-				return err
-			}
-			actualMetric = Metrics{
-				ID:    metric.ID,
-				MType: metricTypeGauge,
-				Value: &value,
-			}
-
-		default:
-			panic("trying to get metric with unknown type, there is an error in logic of checking request")
-		}
-
-		body, err := json.Marshal(actualMetric)
-		if err != nil {
-			return err
-		}
-
-		w.Write(body)
-	}
-
-	return nil
+	return errors.New("trying to upsert metric with unknown type, there is an error in logic of checking request")
 }
