@@ -4,15 +4,13 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/smamykin/smetrics/internal/server/handlers"
 	"github.com/smamykin/smetrics/internal/server/storage"
-	"log"
 	"net/http"
 )
 
-func ListenAndServ() {
+func ListenAndServ(address string) {
 	memStorage := storage.NewMemStorage()
 	r := NewRouter(memStorage)
-	log.Println("Starting the server.")
-	err := http.ListenAndServe("127.0.0.1:8080", r)
+	err := http.ListenAndServe(address, r)
 	panic(err)
 }
 
