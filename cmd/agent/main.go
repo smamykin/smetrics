@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"github.com/caarlos0/env/v6"
 	"github.com/smamykin/smetrics/internal/agent"
+	"github.com/smamykin/smetrics/internal/utils"
 	"log"
 	"time"
 )
@@ -28,14 +29,6 @@ func main() {
 		Provider: &agent.MetricProvider{},
 	}
 
-	go invokeFunctionWithInterval(cfg.PollInterval, metricAgent.GatherMetrics)
-	invokeFunctionWithInterval(cfg.ReportInterval, metricAgent.SendMetrics)
-}
-
-func invokeFunctionWithInterval(duration time.Duration, functionToInvoke func()) {
-	ticker := time.NewTicker(duration)
-	for {
-		<-ticker.C
-		functionToInvoke()
-	}
+	go utils.InvokeFunctionWithInterval(cfg.PollInterval, metricAgent.GatherMetrics)
+	utils.InvokeFunctionWithInterval(cfg.ReportInterval, metricAgent.SendMetrics)
 }

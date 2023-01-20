@@ -2,7 +2,7 @@ package storage
 
 import (
 	"github.com/smamykin/smetrics/internal/server/handlers"
-	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"math/rand"
 	"testing"
 )
@@ -26,8 +26,8 @@ func TestMemStorage_UpsertCounter(t *testing.T) {
 	spy := &ObserverSpy{}
 	m.AddObserver(spy)
 	m.UpsertCounter(metric)
-	assert.Equal(t, map[string]handlers.CounterMetric{metric.Name: metric}, store)
-	assert.Equal(
+	require.Equal(t, map[string]handlers.CounterMetric{metric.Name: metric}, store)
+	require.Equal(
 		t,
 		spy.events,
 		[]IEvent{BeforeUpsertEvent{Event{payload: metric}}, AfterUpsertEvent{Event{payload: metric}}},
@@ -46,8 +46,8 @@ func TestMemStorage_UpsertGauge(t *testing.T) {
 	m.AddObserver(spy)
 	m.UpsertGauge(metric)
 
-	assert.Equal(t, map[string]handlers.GaugeMetric{metric.Name: metric}, store)
-	assert.Equal(
+	require.Equal(t, map[string]handlers.GaugeMetric{metric.Name: metric}, store)
+	require.Equal(
 		t,
 		spy.events,
 		[]IEvent{BeforeUpsertEvent{Event{payload: metric}}, AfterUpsertEvent{Event{payload: metric}}},

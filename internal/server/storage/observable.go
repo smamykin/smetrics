@@ -27,3 +27,11 @@ type AfterUpsertEvent struct {
 type BeforeUpsertEvent struct {
 	Event
 }
+
+type FuncObserver struct {
+	FunctionToInvoke func(e IEvent)
+}
+
+func (fo *FuncObserver) HandleEvent(e IEvent) {
+	fo.FunctionToInvoke(e)
+}

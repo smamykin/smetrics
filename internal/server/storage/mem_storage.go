@@ -4,10 +4,16 @@ import (
 	"github.com/smamykin/smetrics/internal/server/handlers"
 )
 
-func NewMemStorage() *MemStorage {
+func NewMemStorageDefault() *MemStorage {
 	return &MemStorage{
 		counterStore: map[string]handlers.CounterMetric{},
 		gaugeStore:   map[string]handlers.GaugeMetric{},
+	}
+}
+func NewMemStorage(counterStore map[string]handlers.CounterMetric, gaugeStore map[string]handlers.GaugeMetric) *MemStorage {
+	return &MemStorage{
+		counterStore: counterStore,
+		gaugeStore:   gaugeStore,
 	}
 }
 

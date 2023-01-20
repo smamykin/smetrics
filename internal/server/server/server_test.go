@@ -252,8 +252,8 @@ func TestRouter(t *testing.T) {
 
 	for name, tt := range tests {
 		t.Run(name, func(t *testing.T) {
-			repository := storage.NewMemStorage()
-			r := NewRouter(repository)
+			repository := storage.NewMemStorageDefault()
+			r := newRouter(repository)
 			ts := httptest.NewServer(r)
 			defer ts.Close()
 
