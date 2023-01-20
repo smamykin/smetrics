@@ -22,7 +22,7 @@ func TestMemStorage_UpsertCounter(t *testing.T) {
 		gaugeStore:   map[string]handlers.GaugeMetric{},
 	}
 
-	metric := handlers.CounterMetric{rand.Int63(), "metric_name"}
+	metric := handlers.CounterMetric{Value: rand.Int63(), Name: "metric_name"}
 	spy := &ObserverSpy{}
 	m.AddObserver(spy)
 	m.UpsertCounter(metric)
@@ -41,7 +41,7 @@ func TestMemStorage_UpsertGauge(t *testing.T) {
 		gaugeStore:   store,
 	}
 
-	metric := handlers.GaugeMetric{rand.Float64(), "metric_name"}
+	metric := handlers.GaugeMetric{Value: rand.Float64(), Name: "metric_name"}
 	spy := &ObserverSpy{}
 	m.AddObserver(spy)
 	m.UpsertGauge(metric)

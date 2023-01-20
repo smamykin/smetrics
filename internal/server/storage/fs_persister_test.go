@@ -8,7 +8,7 @@ import (
 	"testing"
 )
 
-const expectedJson = `{
+const expectedJSON = `{
   "GaugeStore": {
     "metric_name3": {
       "Value": 33.44,
@@ -23,7 +23,7 @@ const expectedJson = `{
   }
 }`
 
-const expectedJsonAfterUpdate = `{
+const expectedJSONAfterUpdate = `{
   "GaugeStore": {
     "metric_name3": {
       "Value": 33.44,
@@ -66,7 +66,7 @@ func TestFsPersister_Flush(t *testing.T) {
 	// invoke  flush
 	err = fsPersister.Flush(memStorage)
 	check(t, err)
-	assertResultFile(t, expectedJson, fileName)
+	assertResultFile(t, expectedJSON, fileName)
 
 	// upsert something to the storage again
 	memStorage.UpsertCounter(handlers.CounterMetric{Value: 22, Name: "metric_name2"})
@@ -75,7 +75,7 @@ func TestFsPersister_Flush(t *testing.T) {
 	// check the file again
 	err = fsPersister.Flush(memStorage)
 	check(t, err)
-	assertResultFile(t, expectedJsonAfterUpdate, fileName)
+	assertResultFile(t, expectedJSONAfterUpdate, fileName)
 }
 
 func TestFsPersister_Restore(t *testing.T) {
@@ -93,7 +93,7 @@ func TestFsPersister_Restore(t *testing.T) {
 	require.NotNil(t, err)
 	require.Equal(t, NewMemStorageDefault(), memStorage)
 
-	err = os.WriteFile(fileName, []byte(expectedJson), 0664)
+	err = os.WriteFile(fileName, []byte(expectedJSON), 0664)
 	check(t, err)
 	fsPersister.Restore(memStorage)
 
@@ -103,11 +103,11 @@ func TestFsPersister_Restore(t *testing.T) {
 	require.Equal(t, expected, memStorage)
 }
 
-func assertResultFile(t *testing.T, expectedJson string, fileName string) {
+func assertResultFile(t *testing.T, expectedJSON string, fileName string) {
 	// check the file
 	dat, err := os.ReadFile(fileName)
 	check(t, err)
-	require.Equal(t, expectedJson, string(dat))
+	require.Equal(t, expectedJSON, string(dat))
 }
 
 func check(t *testing.T, e error) {
