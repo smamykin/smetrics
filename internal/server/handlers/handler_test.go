@@ -24,7 +24,7 @@ func TestGetMetricFromRequest(t *testing.T) {
 	expectedDelta := rand.Int63()
 
 	expected := Metrics{
-		MType: metricTypeGauge,
+		MType: MetricTypeGauge,
 		ID:    "metric_name3",
 		Value: &expectedValue,
 	}
@@ -49,7 +49,7 @@ func TestGetMetricFromRequest(t *testing.T) {
 	}
 
 	expected = Metrics{
-		MType: metricTypeCounter,
+		MType: MetricTypeCounter,
 		ID:    "metric_name4",
 		Delta: &expectedDelta,
 	}
@@ -74,7 +74,7 @@ func TestGetMetricFromRequest(t *testing.T) {
 	}
 
 	expected = Metrics{
-		MType: metricTypeGauge,
+		MType: MetricTypeGauge,
 		ID:    "metric_name3",
 	}
 	tests["json. get for gauge"] = testCase{

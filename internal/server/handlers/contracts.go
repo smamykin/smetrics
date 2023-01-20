@@ -5,8 +5,8 @@ import (
 )
 
 const (
-	metricTypeGauge   = "gauge"
-	metricTypeCounter = "counter"
+	MetricTypeGauge   = "gauge"
+	MetricTypeCounter = "counter"
 )
 
 const (

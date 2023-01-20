@@ -2,22 +2,23 @@ package storage
 
 import (
 	"github.com/smamykin/smetrics/internal/server/handlers"
-	"log"
-	"os"
 )
 
 func NewMemStorage() *MemStorage {
 	return &MemStorage{
 		counterStore: map[string]handlers.CounterMetric{},
 		gaugeStore:   map[string]handlers.GaugeMetric{},
-		logger:       log.New(os.Stdout, "INFO:    ", log.Ldate|log.Ltime),
 	}
 }
 
 type MemStorage struct {
 	gaugeStore   map[string]handlers.GaugeMetric
 	counterStore map[string]handlers.CounterMetric
-	logger       *log.Logger
+	observers    []Observer
+}
+
+func (m *MemStorage) AddObserver(o Observer) {
+	m.observers = append(m.observers, o)
 }
 
 func (m *MemStorage) GaugeStore() map[string]handlers.GaugeMetric {
@@ -65,17 +66,35 @@ func (m *MemStorage) GetCounter(name string) (int64, error) {
 }
 
 func (m *MemStorage) UpsertGauge(metric handlers.GaugeMetric) error {
+	m.notifyObservers(BeforeUpsertEvent{
+		Event{metric},
+	})
+
 	m.gaugeStore[metric.Name] = metric
 
-	m.logger.Printf("upsert %#v\n", metric)
+	m.notifyObservers(AfterUpsertEvent{
+		Event{metric},
+	})
 
 	return nil
 }
 
 func (m *MemStorage) UpsertCounter(metric handlers.CounterMetric) error {
+	m.notifyObservers(BeforeUpsertEvent{
+		Event{metric},
+	})
+
 	m.counterStore[metric.Name] = metric
 
-	m.logger.Printf("upsert %#v\n", metric)
+	m.notifyObservers(AfterUpsertEvent{
+		Event{metric},
+	})
 
 	return nil
+}
+
+func (m *MemStorage) notifyObservers(event IEvent) {
+	for _, observer := range m.observers {
+		observer.HandleEvent(event)
+	}
 }

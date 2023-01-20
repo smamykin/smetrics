@@ -46,11 +46,11 @@ func (u *UpdateHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 }
 
 func (u *UpdateHandler) upsert(metric Metrics) (err error) {
-	if metricTypeGauge == metric.MType {
+	if MetricTypeGauge == metric.MType {
 		return u.Repository.UpsertGauge(GaugeMetric{Name: metric.ID, Value: *metric.Value})
 	}
 
-	if metricTypeCounter == metric.MType {
+	if MetricTypeCounter == metric.MType {
 		prevValue, _ := u.Repository.GetCounter(metric.ID)
 
 		return u.Repository.UpsertCounter(CounterMetric{Name: metric.ID, Value: prevValue + *metric.Delta})

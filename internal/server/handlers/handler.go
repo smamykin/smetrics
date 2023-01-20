@@ -64,11 +64,11 @@ func (h *Handler) getMetricFromURL(r *http.Request) (metric Metrics, err error) 
 	}
 
 	switch metric.MType {
-	case metricTypeGauge:
+	case MetricTypeGauge:
 		var value float64
 		value, err = strconv.ParseFloat(metricValue, 64)
 		metric.Value = &value
-	case metricTypeCounter:
+	case MetricTypeCounter:
 		var delta int64
 		delta, err = strconv.ParseInt(metricValue, 10, 64)
 		metric.Delta = &delta
@@ -90,24 +90,24 @@ func (h *Handler) handleBody(w http.ResponseWriter, metric Metrics, acceptHeader
 	var actualMetric Metrics
 
 	switch metric.MType {
-	case metricTypeCounter:
+	case MetricTypeCounter:
 		v, err := h.Repository.GetCounter(metric.ID)
 		if err != nil {
 			return err
 		}
 		actualMetric = Metrics{
 			ID:    metric.ID,
-			MType: metricTypeCounter,
+			MType: MetricTypeCounter,
 			Delta: &v,
 		}
-	case metricTypeGauge:
+	case MetricTypeGauge:
 		v, err := h.Repository.GetGauge(metric.ID)
 		if err != nil {
 			return err
 		}
 		actualMetric = Metrics{
 			ID:    metric.ID,
-			MType: metricTypeGauge,
+			MType: MetricTypeGauge,
 			Value: &v,
 		}
 	default:
