@@ -301,6 +301,6 @@ func compress(t *testing.T, s string) string {
 	if err := gz.Close(); err != nil {
 		t.Fatal(err)
 	}
-	gzipBodyUpdate := string(b.Bytes())
+	gzipBodyUpdate := b.String()
 	return gzipBodyUpdate
 }
