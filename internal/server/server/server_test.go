@@ -1,6 +1,8 @@
 package server
 
 import (
+	"bytes"
+	"compress/gzip"
 	"github.com/smamykin/smetrics/internal/server/handlers"
 	"github.com/smamykin/smetrics/internal/server/storage"
 	"github.com/stretchr/testify/require"
@@ -12,16 +14,18 @@ import (
 )
 
 type requestDefinition struct {
-	method      string
-	url         string
-	body        string
-	contentType string
+	method          string
+	url             string
+	body            string
+	contentType     string
+	contentEncoding string
 }
 
 func testRequest(t *testing.T, ts *httptest.Server, request requestDefinition) (status int, responseContentType string, responseBody string) {
 	req, err := http.NewRequest(request.method, ts.URL+request.url, strings.NewReader(request.body))
 	req.Header.Set("Accept", request.contentType)
 	req.Header.Set("Content-Type", request.contentType)
+	req.Header.Set("Content-Encoding", request.contentEncoding)
 
 	require.NoError(t, err)
 
@@ -55,11 +59,13 @@ func TestRouter(t *testing.T) {
 		counterStore map[string]handlers.CounterMetric
 		gaugeStore   map[string]handlers.GaugeMetric
 	}
-	tests := map[string]struct {
+	type testCase struct {
 		name     string
 		requests []requestDefinition
 		expected
-	}{
+	}
+
+	tests := map[string]testCase{
 		"the first update of the counter": {
 			requests: []requestDefinition{{method: http.MethodPost, url: "/update/counter/metric_name/43"}},
 			expected: expected{
@@ -250,6 +256,20 @@ func TestRouter(t *testing.T) {
 		},
 	}
 
+	tests["gzip"] = testCase{
+		requests: []requestDefinition{
+			{method: http.MethodPost, url: "/update/", body: compress(t, `{"id":"metric_name3", "type":"counter", "delta":11}`), contentType: "application/json", contentEncoding: "gzip"},
+			{method: http.MethodPost, url: "/value/", body: compress(t, `{"id":"metric_name3", "type":"counter"}`), contentType: "application/json", contentEncoding: "gzip"},
+		},
+		expected: expected{
+			contentType:  "application/json",
+			statusCode:   http.StatusOK,
+			body:         `{"id":"metric_name3","type":"counter","delta":11}`,
+			counterStore: map[string]handlers.CounterMetric{"metric_name3": {Value: 11, Name: "metric_name3"}},
+			gaugeStore:   map[string]handlers.GaugeMetric{},
+		},
+	}
+
 	for name, tt := range tests {
 		t.Run(name, func(t *testing.T) {
 			repository := storage.NewMemStorageDefault()
@@ -270,4 +290,17 @@ func TestRouter(t *testing.T) {
 			require.Equal(t, tt.expected.contentType, contentType)
 		})
 	}
+}
+
+func compress(t *testing.T, s string) string {
+	var b bytes.Buffer
+	gz := gzip.NewWriter(&b)
+	if _, err := gz.Write([]byte(s)); err != nil {
+		t.Fatal(err)
+	}
+	if err := gz.Close(); err != nil {
+		t.Fatal(err)
+	}
+	gzipBodyUpdate := string(b.Bytes())
+	return gzipBodyUpdate
 }

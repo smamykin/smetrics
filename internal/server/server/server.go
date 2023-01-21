@@ -34,7 +34,7 @@ func ListenAndServ(address string, isRestore bool, storeFile string, storeInterv
 	loggerError.Println(err)
 }
 
-func newRouter(repository handlers.IRepository) chi.Router {
+func newRouter(repository handlers.IRepository) http.Handler {
 	r := chi.NewRouter()
 
 	r.Method("POST", "/update/{metricType}/{metricName}/{metricValue}", handlers.NewUpdateHandler(
@@ -54,22 +54,7 @@ func newRouter(repository handlers.IRepository) chi.Router {
 	r.Method("POST", "/value/", handlers.NewGetHandler(repository, ParameterBag{}))
 	//endregion
 
-	return r
-}
-
-func restore(fileName string, fsPersister *storage.FsPersister, memStorage *storage.MemStorage, loggerError *log.Logger) {
-	isFileExists, err := utils.IsFileExist(fileName)
-	if err != nil {
-		loggerError.Printf("Cannot restore the storage from the dump. Error: %s\n", err.Error())
-	}
-
-	if !isFileExists {
-		return
-	}
-
-	if err = fsPersister.Restore(memStorage); err != nil {
-		loggerError.Printf("Cannot restore the storage from the dump. Error: %s\n", err.Error())
-	}
+	return gzipHandle(r)
 }
 
 type ParameterBag struct{}
@@ -86,6 +71,21 @@ func getSaveToFileFunction(f *storage.FsPersister, memStorage *storage.MemStorag
 		if err != nil {
 			loggerError.Println(err)
 		}
+	}
+}
+
+func restore(fileName string, fsPersister *storage.FsPersister, memStorage *storage.MemStorage, loggerError *log.Logger) {
+	isFileExists, err := utils.IsFileExist(fileName)
+	if err != nil {
+		loggerError.Printf("Cannot restore the storage from the dump. Error: %s\n", err.Error())
+	}
+
+	if !isFileExists {
+		return
+	}
+
+	if err = fsPersister.Restore(memStorage); err != nil {
+		loggerError.Printf("Cannot restore the storage from the dump. Error: %s\n", err.Error())
 	}
 }
 
