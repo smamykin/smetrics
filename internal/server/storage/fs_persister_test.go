@@ -104,7 +104,6 @@ func TestFsPersister_Restore(t *testing.T) {
 }
 
 func assertResultFile(t *testing.T, expectedJSON string, fileName string) {
-	// check the file
 	dat, err := os.ReadFile(fileName)
 	check(t, err)
 	require.Equal(t, expectedJSON, string(dat))

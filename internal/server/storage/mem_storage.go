@@ -72,10 +72,6 @@ func (m *MemStorage) GetCounter(name string) (int64, error) {
 }
 
 func (m *MemStorage) UpsertGauge(metric handlers.GaugeMetric) error {
-	m.notifyObservers(BeforeUpsertEvent{
-		Event{metric},
-	})
-
 	m.gaugeStore[metric.Name] = metric
 
 	m.notifyObservers(AfterUpsertEvent{
@@ -86,10 +82,6 @@ func (m *MemStorage) UpsertGauge(metric handlers.GaugeMetric) error {
 }
 
 func (m *MemStorage) UpsertCounter(metric handlers.CounterMetric) error {
-	m.notifyObservers(BeforeUpsertEvent{
-		Event{metric},
-	})
-
 	m.counterStore[metric.Name] = metric
 
 	m.notifyObservers(AfterUpsertEvent{

@@ -28,28 +28,29 @@ func (h *Handler) handleHeaders(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) getMetricFromRequest(r *http.Request) (metric Metrics, err error) {
 	if r.Header.Get("Content-Type") == "application/json" {
 		metric, err = h.getMetricsFromJSON(r)
+	} else {
+		metric, err = h.getMetricFromURL(r)
+	}
+
+	if err != nil {
 		return
 	}
 
-	metric, err = h.getMetricFromURL(r)
+	_, err = valid.ValidateStruct(&metric)
+
 	return
 }
 
 func (h *Handler) getMetricsFromJSON(r *http.Request) (metric Metrics, err error) {
 	var body []byte
 
-	defer r.Body.Close()
 	body, err = io.ReadAll(r.Body)
 	if err != nil {
 		return
 	}
+	defer r.Body.Close()
 
 	err = json.Unmarshal(body, &metric)
-	if err != nil {
-		return
-	}
-
-	_, err = valid.ValidateStruct(&metric)
 
 	return
 }
@@ -76,12 +77,6 @@ func (h *Handler) getMetricFromURL(r *http.Request) (metric Metrics, err error) 
 		err = errors.New("unknown metric type")
 		return
 	}
-
-	if err != nil {
-		return
-	}
-
-	_, err = valid.ValidateStruct(&metric)
 
 	return
 }

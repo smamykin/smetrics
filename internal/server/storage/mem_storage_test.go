@@ -30,7 +30,7 @@ func TestMemStorage_UpsertCounter(t *testing.T) {
 	require.Equal(
 		t,
 		spy.events,
-		[]IEvent{BeforeUpsertEvent{Event{payload: metric}}, AfterUpsertEvent{Event{payload: metric}}},
+		[]IEvent{AfterUpsertEvent{Event{payload: metric}}},
 	)
 }
 
@@ -50,6 +50,6 @@ func TestMemStorage_UpsertGauge(t *testing.T) {
 	require.Equal(
 		t,
 		spy.events,
-		[]IEvent{BeforeUpsertEvent{Event{payload: metric}}, AfterUpsertEvent{Event{payload: metric}}},
+		[]IEvent{AfterUpsertEvent{Event{payload: metric}}},
 	)
 }

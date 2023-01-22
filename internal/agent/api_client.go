@@ -3,6 +3,7 @@ package agent
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"log"
 	"net/http"
@@ -27,16 +28,16 @@ type Client struct {
 
 func (c *Client) SendMetrics(metricType, metricName, metricValue string) error {
 
-	body, err := c.getUpdateMetrics(metricType, metricName, metricValue)
+	body, err := c.createRequestBody(metricType, metricName, metricValue)
 	if err != nil {
 		c.loggerWarning.Printf("error while sending the metrics to server. Error: %s\n", err.Error())
 		return err
 	}
-
-	c.loggerInfo.Printf("client are making request. url: %s, body: %s \n", "/update/", string(body))
 	url := fmt.Sprintf("%s/update/", c.MetricAggregatorService)
-	post, err := http.Post(url, "application/json", bytes.NewReader(body))
 
+	c.loggerInfo.Printf("client are making request. url: %s, body: %s \n", url, string(body))
+
+	post, err := http.Post(url, "application/json", bytes.NewReader(body))
 	if err != nil {
 		c.loggerWarning.Printf("error while sending the metrics to server. Error: %s\n", err.Error())
 		return err
@@ -52,24 +53,26 @@ func (c *Client) SendMetrics(metricType, metricName, metricValue string) error {
 	return nil
 }
 
-func (c *Client) getUpdateMetrics(metricType, metricName, metricValue string) (body []byte, err error) {
+func (c *Client) createRequestBody(metricType, metricName, metricValue string) (body []byte, err error) {
 	metrics := Metrics{
 		MType: metricType,
 		ID:    metricName,
 	}
-	if metrics.MType == MetricTypeGauge {
+	switch metrics.MType {
+	case MetricTypeGauge:
 		value, err := strconv.ParseFloat(metricValue, 64)
 		if err != nil {
 			return body, err
 		}
 		metrics.Value = &value
-	}
-	if metrics.MType == MetricTypeCounter {
+	case MetricTypeCounter:
 		value, err := strconv.ParseInt(metricValue, 10, 64)
 		if err != nil {
 			return body, err
 		}
 		metrics.Delta = &value
+	default:
+		return body, errors.New("unknown type of the metric")
 	}
 
 	body, err = json.Marshal(metrics)

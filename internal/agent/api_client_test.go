@@ -49,11 +49,11 @@ func (h *handlerForTest) ServeHTTP(writer http.ResponseWriter, request *http.Req
 	require.Equal(h.t, h.expectedMethod, request.Method)
 	require.Equal(h.t, h.expectedContentType, request.Header.Get("Content-Type"))
 	require.Equal(h.t, h.expectedPath, request.URL.Path)
-	defer request.Body.Close()
 	body, err := io.ReadAll(request.Body)
 	if err != nil {
 		return
 	}
+	defer request.Body.Close()
 	require.Equal(h.t, h.expectedBody, string(body))
 }
 

@@ -24,10 +24,6 @@ type AfterUpsertEvent struct {
 	Event
 }
 
-type BeforeUpsertEvent struct {
-	Event
-}
-
 type FuncObserver struct {
 	FunctionToInvoke func(e IEvent)
 }
