@@ -1,8 +1,29 @@
 package storage
 
 import (
+	"fmt"
 	"github.com/smamykin/smetrics/internal/server/handlers"
+	"github.com/smamykin/smetrics/internal/utils"
 )
+
+func NewMemStorage(storeFile string, isRestore bool, isPersistToFile bool) (*MemStorage, error) {
+	memStorage := &MemStorage{
+		counterStore: map[string]handlers.CounterMetric{},
+		gaugeStore:   map[string]handlers.GaugeMetric{},
+		fsPersister:  newFsPersister(storeFile),
+	}
+
+	if isRestore {
+		if err := memStorage.restore(); err != nil {
+			return memStorage, err
+		}
+	}
+
+	if isPersistToFile {
+		memStorage.AddObserver(newPersistToFileObserver(memStorage))
+	}
+	return memStorage, nil
+}
 
 func NewMemStorageDefault() *MemStorage {
 	return &MemStorage{
@@ -10,17 +31,12 @@ func NewMemStorageDefault() *MemStorage {
 		gaugeStore:   map[string]handlers.GaugeMetric{},
 	}
 }
-func NewMemStorage(counterStore map[string]handlers.CounterMetric, gaugeStore map[string]handlers.GaugeMetric) *MemStorage {
-	return &MemStorage{
-		counterStore: counterStore,
-		gaugeStore:   gaugeStore,
-	}
-}
 
 type MemStorage struct {
 	gaugeStore   map[string]handlers.GaugeMetric
 	counterStore map[string]handlers.CounterMetric
 	observers    []Observer
+	fsPersister  *fsPersister
 }
 
 func (m *MemStorage) AddObserver(o Observer) {
@@ -74,25 +90,56 @@ func (m *MemStorage) GetCounter(name string) (int64, error) {
 func (m *MemStorage) UpsertGauge(metric handlers.GaugeMetric) error {
 	m.gaugeStore[metric.Name] = metric
 
-	m.notifyObservers(AfterUpsertEvent{
+	return m.notifyObservers(AfterUpsertEvent{
 		Event{metric},
 	})
-
-	return nil
 }
 
 func (m *MemStorage) UpsertCounter(metric handlers.CounterMetric) error {
 	m.counterStore[metric.Name] = metric
 
-	m.notifyObservers(AfterUpsertEvent{
+	return m.notifyObservers(AfterUpsertEvent{
 		Event{metric},
 	})
+}
+
+func (m *MemStorage) notifyObservers(event IEvent) error {
+	for _, observer := range m.observers {
+		if err := observer.HandleEvent(event); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (m *MemStorage) restore() error {
+	isFileExists, err := utils.IsFileExist(m.fsPersister.fileName)
+	if err != nil {
+		return fmt.Errorf("cannot restore the storage from the dump. Error: %w", err)
+	}
+
+	if !isFileExists {
+		return nil
+	}
+
+	if err = m.fsPersister.restore(m); err != nil {
+		return fmt.Errorf("cannot restore the storage from the dump. Error: %w", err)
+	}
 
 	return nil
 }
 
-func (m *MemStorage) notifyObservers(event IEvent) {
-	for _, observer := range m.observers {
-		observer.HandleEvent(event)
+func (m *MemStorage) PersistToFile() error {
+	return m.fsPersister.flush(m)
+}
+
+func newPersistToFileObserver(memStorage *MemStorage) Observer {
+	return &FuncObserver{
+		FunctionToInvoke: func(e IEvent) error {
+			if _, ok := e.(AfterUpsertEvent); ok {
+				return memStorage.PersistToFile()
+			}
+			return nil
+		},
 	}
 }

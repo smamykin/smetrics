@@ -11,8 +11,9 @@ type ObserverSpy struct {
 	events []IEvent
 }
 
-func (o *ObserverSpy) HandleEvent(e IEvent) {
+func (o *ObserverSpy) HandleEvent(e IEvent) error {
 	o.events = append(o.events, e)
+	return nil
 }
 
 func TestMemStorage_UpsertCounter(t *testing.T) {

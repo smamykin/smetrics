@@ -6,17 +6,17 @@ import (
 	"os"
 )
 
-func NewFsPersister(fileName string) *FsPersister {
-	return &FsPersister{
+func newFsPersister(fileName string) *fsPersister {
+	return &fsPersister{
 		fileName: fileName,
 	}
 }
 
-type FsPersister struct {
+type fsPersister struct {
 	fileName string
 }
 
-func (f *FsPersister) Flush(memStorage *MemStorage) (err error) {
+func (f *fsPersister) flush(memStorage *MemStorage) (err error) {
 	dump := memStorageDump{
 		GaugeStore:   memStorage.GaugeStore(),
 		CounterStore: memStorage.CounterStore(),
@@ -30,7 +30,7 @@ func (f *FsPersister) Flush(memStorage *MemStorage) (err error) {
 	return os.WriteFile(f.fileName, data, 0664)
 }
 
-func (f *FsPersister) Restore(memStorage *MemStorage) (err error) {
+func (f *fsPersister) restore(memStorage *MemStorage) (err error) {
 	data, err := os.ReadFile(f.fileName)
 	if err != nil {
 		return err

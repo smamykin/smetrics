@@ -5,7 +5,7 @@ type Observable interface {
 }
 
 type Observer interface {
-	HandleEvent(e IEvent)
+	HandleEvent(e IEvent) error
 }
 
 type IEvent interface {
@@ -25,9 +25,9 @@ type AfterUpsertEvent struct {
 }
 
 type FuncObserver struct {
-	FunctionToInvoke func(e IEvent)
+	FunctionToInvoke func(e IEvent) error
 }
 
-func (fo *FuncObserver) HandleEvent(e IEvent) {
-	fo.FunctionToInvoke(e)
+func (fo *FuncObserver) HandleEvent(e IEvent) error {
+	return fo.FunctionToInvoke(e)
 }
