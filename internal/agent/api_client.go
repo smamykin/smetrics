@@ -62,22 +62,20 @@ func (c *Client) createRequestBody(metricType, metricName, metricValue string) (
 	case MetricTypeGauge:
 		value, err := strconv.ParseFloat(metricValue, 64)
 		if err != nil {
-			return body, err
+			return body, fmt.Errorf("unable to parse gauge value: %w", err)
 		}
 		metrics.Value = &value
 	case MetricTypeCounter:
 		value, err := strconv.ParseInt(metricValue, 10, 64)
 		if err != nil {
-			return body, err
+			return body, fmt.Errorf("unable to parse counter value: %w", err)
 		}
 		metrics.Delta = &value
 	default:
 		return body, errors.New("unknown type of the metric")
 	}
 
-	body, err = json.Marshal(metrics)
-
-	return body, err
+	return json.Marshal(metrics)
 }
 
 type Metrics struct {
