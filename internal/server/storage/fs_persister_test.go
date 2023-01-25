@@ -62,9 +62,11 @@ func TestFsPersister_Flush(t *testing.T) {
 
 	// create instance
 
-	fsPersister := fsPersister{fileName}
+	persister, err := newFsPersister(fileName)
+	check(t, err)
+
 	// invoke  flush
-	err = fsPersister.flush(memStorage)
+	err = persister.flush(memStorage)
 	check(t, err)
 	assertResultFile(t, expectedJSON, fileName)
 
@@ -73,7 +75,7 @@ func TestFsPersister_Flush(t *testing.T) {
 	memStorage.UpsertGauge(handlers.GaugeMetric{Value: 55.66, Name: "metric_name4"})
 
 	// check the file again
-	err = fsPersister.flush(memStorage)
+	err = persister.flush(memStorage)
 	check(t, err)
 	assertResultFile(t, expectedJSONAfterUpdate, fileName)
 }
@@ -87,15 +89,16 @@ func TestFsPersister_Restore(t *testing.T) {
 	check(t, err)
 
 	memStorage := NewMemStorageDefault()
-	fsPersister := fsPersister{fileName}
-	err = fsPersister.restore(memStorage)
+	persister, err := newFsPersister(fileName)
+	check(t, err)
+	err = persister.restore(memStorage)
 
-	require.NotNil(t, err)
+	require.Nil(t, err)
 	require.Equal(t, NewMemStorageDefault(), memStorage)
 
 	err = os.WriteFile(fileName, []byte(expectedJSON), 0664)
 	check(t, err)
-	fsPersister.restore(memStorage)
+	persister.restore(memStorage)
 
 	expected := NewMemStorageDefault()
 	expected.UpsertCounter(handlers.CounterMetric{Value: 11, Name: "metric_name1"})

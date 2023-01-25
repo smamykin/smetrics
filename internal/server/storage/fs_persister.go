@@ -3,17 +3,23 @@ package storage
 import (
 	"encoding/json"
 	"github.com/smamykin/smetrics/internal/server/handlers"
+	"io/ioutil"
 	"os"
 )
 
-func newFsPersister(fileName string) *fsPersister {
-	return &fsPersister{
-		fileName: fileName,
+func newFsPersister(fileName string) (*fsPersister, error) {
+
+	file, err := os.OpenFile(fileName, os.O_RDWR|os.O_CREATE, 0644)
+	if err != nil {
+		return &fsPersister{}, err
 	}
+	return &fsPersister{
+		file: file,
+	}, nil
 }
 
 type fsPersister struct {
-	fileName string
+	file *os.File
 }
 
 func (f *fsPersister) flush(memStorage *MemStorage) (err error) {
@@ -27,13 +33,26 @@ func (f *fsPersister) flush(memStorage *MemStorage) (err error) {
 		return err
 	}
 
-	return os.WriteFile(f.fileName, data, 0664)
+	err = f.file.Truncate(0)
+	if err != nil {
+		return err
+	}
+	_, err = f.file.Seek(0, 0)
+	if err != nil {
+		return err
+	}
+	_, err = f.file.Write(data)
+
+	return err
 }
 
 func (f *fsPersister) restore(memStorage *MemStorage) (err error) {
-	data, err := os.ReadFile(f.fileName)
+	data, err := ioutil.ReadAll(f.file)
 	if err != nil {
 		return err
+	}
+	if len(data) == 0 {
+		return nil
 	}
 
 	dump := &memStorageDump{}

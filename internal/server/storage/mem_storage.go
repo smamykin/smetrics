@@ -3,14 +3,17 @@ package storage
 import (
 	"fmt"
 	"github.com/smamykin/smetrics/internal/server/handlers"
-	"github.com/smamykin/smetrics/internal/utils"
 )
 
-func NewMemStorage(storeFile string, isRestore bool, isPersistSynchronouslyToFile bool) (*MemStorage, error) {
-	memStorage := &MemStorage{
+func NewMemStorage(storeFile string, isRestore bool, isPersistSynchronouslyToFile bool) (memStorage *MemStorage, err error) {
+	persister, err := newFsPersister(storeFile)
+	if err != nil {
+		return memStorage, err
+	}
+	memStorage = &MemStorage{
 		counterStore: map[string]handlers.CounterMetric{},
 		gaugeStore:   map[string]handlers.GaugeMetric{},
-		fsPersister:  newFsPersister(storeFile),
+		fsPersister:  persister,
 	}
 
 	if isRestore {
@@ -113,16 +116,7 @@ func (m *MemStorage) notifyObservers(event IEvent) error {
 }
 
 func (m *MemStorage) restore() error {
-	isFileExists, err := utils.IsFileExist(m.fsPersister.fileName)
-	if err != nil {
-		return fmt.Errorf("cannot restore the storage from the dump. Error: %w", err)
-	}
-
-	if !isFileExists {
-		return nil
-	}
-
-	if err = m.fsPersister.restore(m); err != nil {
+	if err := m.fsPersister.restore(m); err != nil {
 		return fmt.Errorf("cannot restore the storage from the dump. Error: %w", err)
 	}
 
