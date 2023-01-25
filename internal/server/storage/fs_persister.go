@@ -24,24 +24,22 @@ func (f *FsPersister) Flush(memStorage *MemStorage) (err error) {
 
 	data, err := json.MarshalIndent(dump, "", "  ")
 	if err != nil {
-		return
+		return err
 	}
 
-	err = os.WriteFile(f.fileName, data, 0664)
-
-	return
+	return os.WriteFile(f.fileName, data, 0664)
 }
 
 func (f *FsPersister) Restore(memStorage *MemStorage) (err error) {
 	data, err := os.ReadFile(f.fileName)
 	if err != nil {
-		return
+		return err
 	}
 
 	dump := &memStorageDump{}
 	err = json.Unmarshal(data, dump)
 	if err != nil {
-		return
+		return err
 	}
 
 	memStorage.gaugeStore = dump.GaugeStore

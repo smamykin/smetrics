@@ -33,12 +33,16 @@ func (h *Handler) getMetricFromRequest(r *http.Request) (metric Metrics, err err
 	}
 
 	if err != nil {
-		return
+		return metric, err
 	}
 
 	_, err = valid.ValidateStruct(&metric)
 
-	return
+	if err != nil {
+		return metric, err
+	}
+
+	return metric, nil
 }
 
 func (h *Handler) getMetricsFromJSON(r *http.Request) (metric Metrics, err error) {
@@ -46,13 +50,16 @@ func (h *Handler) getMetricsFromJSON(r *http.Request) (metric Metrics, err error
 
 	body, err = io.ReadAll(r.Body)
 	if err != nil {
-		return
+		return metric, err
 	}
 	defer r.Body.Close()
 
 	err = json.Unmarshal(body, &metric)
+	if err != nil {
+		return metric, err
+	}
 
-	return
+	return metric, nil
 }
 
 func (h *Handler) getMetricFromURL(r *http.Request) (metric Metrics, err error) {
@@ -61,7 +68,7 @@ func (h *Handler) getMetricFromURL(r *http.Request) (metric Metrics, err error) 
 
 	metricValue := h.ParametersBag.GetURLParam(r, paramNameMetricValue)
 	if metricValue == "" {
-		return
+		return metric, nil
 	}
 
 	switch metric.MType {
@@ -75,10 +82,9 @@ func (h *Handler) getMetricFromURL(r *http.Request) (metric Metrics, err error) 
 		metric.Delta = &delta
 	default:
 		err = errors.New("unknown metric type")
-		return
 	}
 
-	return
+	return metric, err
 }
 
 func (h *Handler) handleBody(w http.ResponseWriter, metric Metrics, acceptHeader string) (err error) {
