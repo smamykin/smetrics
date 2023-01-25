@@ -8,6 +8,7 @@ import (
 	"github.com/smamykin/smetrics/internal/utils"
 	"log"
 	"os"
+	"strings"
 	"time"
 )
 
@@ -18,9 +19,10 @@ type Config struct {
 }
 
 const (
-	defaultAddress        = "localhost:8080"
+	defaultAddress        = "http://localhost:8080"
 	defaultReportInterval = time.Second * 10
 	defaultPollInterval   = time.Second * 2
+	defaultSchema         = "http://"
 )
 
 func main() {
@@ -45,10 +47,13 @@ func main() {
 		cfg.PollInterval = *pollInterval
 	}
 
-	fmt.Printf("Starting the agent. The configuration: %#v", cfg)
+	if strings.Index(cfg.Address, "http") != 0 {
+		cfg.Address = defaultSchema + cfg.Address
+	}
 
+	fmt.Printf("Starting the agent. The configuration: %#v", cfg)
 	metricAgent := agent.MetricAgent{
-		Client:   agent.NewClient("http://" + cfg.Address),
+		Client:   agent.NewClient(cfg.Address),
 		Provider: &agent.MetricProvider{},
 	}
 
