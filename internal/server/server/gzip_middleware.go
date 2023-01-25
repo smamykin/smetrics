@@ -1,7 +1,6 @@
 package server
 
 import (
-	"bytes"
 	"compress/gzip"
 	"io"
 	"net/http"
@@ -30,14 +29,7 @@ func gzipHandle(next http.Handler) http.Handler {
 			// не забывайте потом закрыть *gzip.Reader
 			defer gz.Close()
 
-			// при чтении вернётся распакованный слайс байт
-			body, err := io.ReadAll(gz)
-			if err != nil {
-				http.Error(w, err.Error(), http.StatusInternalServerError)
-				return
-			}
-			reader := bytes.NewReader(body)
-			r.Body = io.NopCloser(reader)
+			r.Body = gz
 		}
 
 		// проверяем, что клиент поддерживает gzip-сжатие
