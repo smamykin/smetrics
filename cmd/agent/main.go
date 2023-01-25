@@ -8,6 +8,7 @@ import (
 	"github.com/smamykin/smetrics/internal/utils"
 	"log"
 	"os"
+	"strings"
 	"time"
 )
 
@@ -44,6 +45,10 @@ func main() {
 	}
 	if _, isPresent := os.LookupEnv("POLL_INTERVAL"); !isPresent {
 		cfg.PollInterval = *pollInterval
+	}
+
+	if strings.Index(cfg.Address, "http") != 0 {
+		cfg.Address = defaultSchema + cfg.Address
 	}
 
 	fmt.Printf("Starting the agent. The configuration: %#v", cfg)
