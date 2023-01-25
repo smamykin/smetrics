@@ -3,7 +3,7 @@ package storage
 import (
 	"encoding/json"
 	"github.com/smamykin/smetrics/internal/server/handlers"
-	"io/ioutil"
+	"io"
 	"os"
 )
 
@@ -47,7 +47,7 @@ func (f *fsPersister) flush(memStorage *MemStorage) (err error) {
 }
 
 func (f *fsPersister) restore(memStorage *MemStorage) (err error) {
-	data, err := ioutil.ReadAll(f.file)
+	data, err := io.ReadAll(f.file)
 	if err != nil {
 		return err
 	}
