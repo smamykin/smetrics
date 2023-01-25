@@ -6,7 +6,7 @@ import (
 	"github.com/smamykin/smetrics/internal/utils"
 )
 
-func NewMemStorage(storeFile string, isRestore bool, isPersistToFile bool) (*MemStorage, error) {
+func NewMemStorage(storeFile string, isRestore bool, isPersistSynchronouslyToFile bool) (*MemStorage, error) {
 	memStorage := &MemStorage{
 		counterStore: map[string]handlers.CounterMetric{},
 		gaugeStore:   map[string]handlers.GaugeMetric{},
@@ -19,7 +19,7 @@ func NewMemStorage(storeFile string, isRestore bool, isPersistToFile bool) (*Mem
 		}
 	}
 
-	if isPersistToFile {
+	if isPersistSynchronouslyToFile {
 		memStorage.AddObserver(newPersistToFileObserver(memStorage))
 	}
 	return memStorage, nil

@@ -5,7 +5,10 @@ import (
 	"fmt"
 	"github.com/caarlos0/env/v6"
 	"github.com/smamykin/smetrics/internal/server/server"
+	"github.com/smamykin/smetrics/internal/server/storage"
+	"github.com/smamykin/smetrics/internal/utils"
 	"log"
+	"net/http"
 	"os"
 	"time"
 )
@@ -23,6 +26,9 @@ const (
 	defaultStoreFile     = "/tmp/devops-metrics-db.json"
 	defaultStoreInterval = time.Second * 300
 )
+
+var loggerInfo = log.New(os.Stdout, "INFO:    ", log.Ldate|log.Ltime)
+var loggerError = log.New(os.Stdout, "ERROR:   ", log.Ldate|log.Ltime)
 
 func main() {
 	address := flag.String("a", defaultAddress, "The address of the server")
@@ -50,7 +56,29 @@ func main() {
 		cfg.StoreInterval = *storeInterval
 	}
 
-	fmt.Printf("Starting the server. The configuration: %#v", cfg)
+	fmt.Printf("Starting the server. The configuration: %#v\n", cfg)
 
-	server.ListenAndServ(cfg.Address, cfg.Restore, cfg.StoreFile, cfg.StoreInterval)
+	memStorage, err := storage.NewMemStorage(cfg.StoreFile, cfg.Restore, cfg.StoreInterval.Seconds() == 0)
+	if err != nil {
+		loggerError.Printf("Cannot create memStorage. Error: %s\n", err.Error())
+	}
+	memStorage.AddObserver(storage.GetLoggerObserver(loggerInfo))
+
+	if storeInterval.Seconds() != 0 {
+		go utils.InvokeFunctionWithInterval(cfg.StoreInterval, getSaveToFileFunction(memStorage))
+	}
+
+	err = http.ListenAndServe(cfg.Address, server.NewRouter(memStorage))
+
+	loggerError.Println(err)
+}
+
+func getSaveToFileFunction(memStorage *storage.MemStorage) func() {
+	return func() {
+		loggerInfo.Println("Flushing storage to file")
+		err := memStorage.PersistToFile()
+		if err != nil {
+			loggerError.Println(err)
+		}
+	}
 }

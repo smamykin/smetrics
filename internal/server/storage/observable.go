@@ -1,5 +1,7 @@
 package storage
 
+import "log"
+
 type Observable interface {
 	AddObserver(o *Observer)
 }
@@ -30,4 +32,15 @@ type FuncObserver struct {
 
 func (fo *FuncObserver) HandleEvent(e IEvent) error {
 	return fo.FunctionToInvoke(e)
+}
+
+func GetLoggerObserver(logger *log.Logger) Observer {
+	return &FuncObserver{
+		FunctionToInvoke: func(e IEvent) error {
+			if _, ok := e.(AfterUpsertEvent); ok {
+				logger.Printf("upsert %#v\n", e.Payload())
+			}
+			return nil
+		},
+	}
 }
