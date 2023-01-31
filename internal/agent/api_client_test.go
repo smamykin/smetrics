@@ -2,6 +2,7 @@ package agent
 
 import (
 	"fmt"
+	"github.com/smamykin/smetrics/internal/utils"
 	"github.com/stretchr/testify/require"
 	"io"
 	"log"
@@ -13,26 +14,50 @@ import (
 )
 
 func TestClient_SendMetrics(t *testing.T) {
-
+	type testCase struct {
+		hash         IHashGenerator
+		expectedBody string
+	}
 	value := rand.Int()
-	handler := handlerForTest{
-		expectedMethod:      "POST",
-		expectedPath:        "/update/",
-		expectedContentType: "application/json",
-		expectedBody:        fmt.Sprintf(`{"id":"metricNameTest","type":"counter","delta":%d}`, value),
-		t:                   t,
-	}
-	server := httptest.NewServer(&handler)
-	defer server.Close()
 
-	client := Client{
-		server.URL,
-		log.New(writerMock{}, "test: ", log.Ldate|log.Ltime),
-		log.New(writerMock{}, "test: ", log.Ldate|log.Ltime),
-	}
-	client.SendMetrics("counter", "metricNameTest", strconv.Itoa(value))
+	h := utils.NewHashGenerator("secret")
+	sign, err := h.Generate(fmt.Sprintf("metricNameTest:counter:%d", value))
+	require.Nil(t, err)
 
-	require.True(t, handler.isInvoked)
+	tests := map[string]testCase{
+		"default": {
+			nil,
+			fmt.Sprintf(`{"id":"metricNameTest","type":"counter","delta":%d}`, value),
+		},
+		"with key": {
+			h,
+			fmt.Sprintf(`{"id":"metricNameTest","type":"counter","delta":%d,"hash":"%s"}`, value, sign),
+		},
+	}
+
+	for name, tt := range tests {
+		t.Run(name, func(t *testing.T) {
+			handler := handlerForTest{
+				expectedMethod:      "POST",
+				expectedPath:        "/update/",
+				expectedContentType: "application/json",
+				expectedBody:        tt.expectedBody,
+				t:                   t,
+			}
+			server := httptest.NewServer(&handler)
+			defer server.Close()
+
+			client := Client{
+				server.URL,
+				log.New(writerMock{}, "test: ", log.Ldate|log.Ltime),
+				log.New(writerMock{}, "test: ", log.Ldate|log.Ltime),
+				tt.hash,
+			}
+			client.SendMetrics("counter", "metricNameTest", strconv.Itoa(value))
+
+			require.True(t, handler.isInvoked)
+		})
+	}
 }
 
 type handlerForTest struct {

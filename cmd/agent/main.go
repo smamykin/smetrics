@@ -59,7 +59,7 @@ func main() {
 
 	fmt.Printf("Starting the agent. The configuration: %#v", cfg)
 	metricAgent := agent.MetricAgent{
-		Client:   agent.NewClient(cfg.Address),
+		Client:   agent.NewClient(cfg.Address, cfg.Key),
 		Provider: &agent.MetricProvider{},
 	}
 
