@@ -18,6 +18,7 @@ type Config struct {
 	Restore       bool          `env:"RESTORE"`
 	StoreFile     string        `env:"STORE_FILE"`
 	StoreInterval time.Duration `env:"STORE_INTERVAL"`
+	Key           string        `env:"KEY"`
 }
 
 const (
@@ -25,6 +26,7 @@ const (
 	defaultRestore       = true
 	defaultStoreFile     = "/tmp/devops-metrics-db.json"
 	defaultStoreInterval = time.Second * 300
+	defaultKey           = ""
 )
 
 var loggerInfo = log.New(os.Stdout, "INFO:    ", log.Ldate|log.Ltime)
@@ -35,6 +37,7 @@ func main() {
 	restore := flag.Bool("r", defaultRestore, "To restore the dump from the file")
 	storeFile := flag.String("f", defaultStoreFile, "the absolute path to the dump file.")
 	storeInterval := flag.Duration("i", defaultStoreInterval, "How often to save the dump of the metrics")
+	key := flag.String("k", defaultKey, "The secret key")
 	flag.Parse()
 
 	var cfg Config
@@ -54,6 +57,9 @@ func main() {
 	}
 	if _, isPresent := os.LookupEnv("STORE_INTERVAL"); !isPresent {
 		cfg.StoreInterval = *storeInterval
+	}
+	if _, isPresent := os.LookupEnv("KEY"); !isPresent {
+		cfg.Key = *key
 	}
 
 	fmt.Printf("Starting the server. The configuration: %#v\n", cfg)

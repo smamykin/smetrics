@@ -16,6 +16,7 @@ type Config struct {
 	Address        string        `env:"ADDRESS"`
 	ReportInterval time.Duration `env:"REPORT_INTERVAL"`
 	PollInterval   time.Duration `env:"POLL_INTERVAL"`
+	Key            string        `env:"KEY"`
 }
 
 const (
@@ -23,12 +24,14 @@ const (
 	defaultReportInterval = time.Second * 10
 	defaultPollInterval   = time.Second * 2
 	defaultSchema         = "http://"
+	defaultKey            = ""
 )
 
 func main() {
 	address := flag.String("a", defaultAddress, "The address of the metric server")
 	reportInterval := flag.Duration("r", defaultReportInterval, "How often to send metrics to server")
 	pollInterval := flag.Duration("p", defaultPollInterval, "How often to refresh metrics")
+	key := flag.String("k", defaultKey, "The secret key")
 	flag.Parse()
 
 	var cfg Config
@@ -45,6 +48,9 @@ func main() {
 	}
 	if _, isPresent := os.LookupEnv("POLL_INTERVAL"); !isPresent {
 		cfg.PollInterval = *pollInterval
+	}
+	if _, isPresent := os.LookupEnv("KEY"); !isPresent {
+		cfg.Key = *key
 	}
 
 	if strings.Index(cfg.Address, "http") != 0 {
