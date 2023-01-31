@@ -1,31 +1,62 @@
 package main
 
 import (
+	"flag"
+	"fmt"
+	"github.com/caarlos0/env/v6"
 	"github.com/smamykin/smetrics/internal/agent"
+	"github.com/smamykin/smetrics/internal/utils"
+	"log"
+	"os"
+	"strings"
 	"time"
 )
 
+type Config struct {
+	Address        string        `env:"ADDRESS"`
+	ReportInterval time.Duration `env:"REPORT_INTERVAL"`
+	PollInterval   time.Duration `env:"POLL_INTERVAL"`
+}
+
 const (
-	gatherInterval = 2 * time.Second
-	sendInterval   = 10 * time.Second
+	defaultAddress        = "http://localhost:8080"
+	defaultReportInterval = time.Second * 10
+	defaultPollInterval   = time.Second * 2
+	defaultSchema         = "http://"
 )
 
 func main() {
+	address := flag.String("a", defaultAddress, "The address of the metric server")
+	reportInterval := flag.Duration("r", defaultReportInterval, "How often to send metrics to server")
+	pollInterval := flag.Duration("p", defaultPollInterval, "How often to refresh metrics")
+	flag.Parse()
+
+	var cfg Config
+	err := env.Parse(&cfg)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	if _, isPresent := os.LookupEnv("ADDRESS"); !isPresent {
+		cfg.Address = *address
+	}
+	if _, isPresent := os.LookupEnv("REPORT_INTERVAL"); !isPresent {
+		cfg.ReportInterval = *reportInterval
+	}
+	if _, isPresent := os.LookupEnv("POLL_INTERVAL"); !isPresent {
+		cfg.PollInterval = *pollInterval
+	}
+
+	if strings.Index(cfg.Address, "http") != 0 {
+		cfg.Address = defaultSchema + cfg.Address
+	}
+
+	fmt.Printf("Starting the agent. The configuration: %#v", cfg)
 	metricAgent := agent.MetricAgent{
-		Client: agent.NewClient(
-			"http://127.0.0.1:8080",
-		),
+		Client:   agent.NewClient(cfg.Address),
 		Provider: &agent.MetricProvider{},
 	}
 
-	go invokeFunctionWithInterval(gatherInterval, metricAgent.GatherMetrics)
-	invokeFunctionWithInterval(sendInterval, metricAgent.SendMetrics)
-}
-
-func invokeFunctionWithInterval(duration time.Duration, functionToInvoke func()) {
-	ticker := time.NewTicker(duration)
-	for {
-		<-ticker.C
-		functionToInvoke()
-	}
+	go utils.InvokeFunctionWithInterval(cfg.PollInterval, metricAgent.GatherMetrics)
+	utils.InvokeFunctionWithInterval(cfg.ReportInterval, metricAgent.SendMetrics)
 }

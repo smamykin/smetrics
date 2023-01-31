@@ -1,10 +1,14 @@
 package agent
 
 import (
+	"bytes"
+	"encoding/json"
+	"errors"
 	"fmt"
 	"log"
 	"net/http"
 	"os"
+	"strconv"
 )
 
 func NewClient(metricAggregatorService string) *Client {
@@ -23,11 +27,17 @@ type Client struct {
 }
 
 func (c *Client) SendMetrics(metricType, metricName, metricValue string) error {
-	url := c.getUpdateMetricURL(metricType, metricName, metricValue)
 
-	c.loggerInfo.Printf("client are making request. url: %s\n", url)
-	post, err := http.Post(url, "text/plain", nil)
+	body, err := c.createRequestBody(metricType, metricName, metricValue)
+	if err != nil {
+		c.loggerWarning.Printf("error while sending the metrics to server. Error: %s\n", err.Error())
+		return err
+	}
+	url := fmt.Sprintf("%s/update/", c.MetricAggregatorService)
 
+	c.loggerInfo.Printf("client are making request. url: %s, body: %s \n", url, string(body))
+
+	post, err := http.Post(url, "application/json", bytes.NewReader(body))
 	if err != nil {
 		c.loggerWarning.Printf("error while sending the metrics to server. Error: %s\n", err.Error())
 		return err
@@ -43,6 +53,34 @@ func (c *Client) SendMetrics(metricType, metricName, metricValue string) error {
 	return nil
 }
 
-func (c *Client) getUpdateMetricURL(metricType, metricName, metricValue string) (url string) {
-	return fmt.Sprintf("%s/update/%s/%s/%s", c.MetricAggregatorService, metricType, metricName, metricValue)
+func (c *Client) createRequestBody(metricType, metricName, metricValue string) (body []byte, err error) {
+	metrics := Metrics{
+		MType: metricType,
+		ID:    metricName,
+	}
+	switch metrics.MType {
+	case MetricTypeGauge:
+		value, err := strconv.ParseFloat(metricValue, 64)
+		if err != nil {
+			return body, fmt.Errorf("unable to parse gauge value: %w", err)
+		}
+		metrics.Value = &value
+	case MetricTypeCounter:
+		value, err := strconv.ParseInt(metricValue, 10, 64)
+		if err != nil {
+			return body, fmt.Errorf("unable to parse counter value: %w", err)
+		}
+		metrics.Delta = &value
+	default:
+		return body, errors.New("unknown type of the metric")
+	}
+
+	return json.Marshal(metrics)
+}
+
+type Metrics struct {
+	ID    string   `json:"id"`              // имя метрики
+	MType string   `json:"type"`            // параметр, принимающий значение gauge или counter
+	Delta *int64   `json:"delta,omitempty"` // значение метрики в случае передачи counter
+	Value *float64 `json:"value,omitempty"` // значение метрики в случае передачи gauge
 }

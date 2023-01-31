@@ -1,56 +1,60 @@
 package handlers
 
 import (
-	"github.com/go-chi/chi/v5"
+	"errors"
 	"net/http"
-	"strconv"
 )
 
 type UpdateHandler struct {
-	Repository IRepository
+	*Handler
+}
+
+func NewUpdateHandler(repository IRepository, parameterBag IParametersBag) *UpdateHandler {
+	return &UpdateHandler{
+		&Handler{repository, parameterBag},
+	}
 }
 
 func (u *UpdateHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	var err error
-	w.Header().Set("Content-Type", "text/plain")
 
-	metricType := chi.URLParam(r, "metricType")
-	metricName := chi.URLParam(r, "metricName")
-	metricValue := chi.URLParam(r, "metricValue")
-
-	switch metricType {
-	case metricTypeGauge:
-		err = u.upsertGauge(metricName, metricValue)
-	case metricTypeCounter:
-		err = u.upsertCounter(metricName, metricValue)
-	default:
-		http.Error(w, "metric type is incorrect", http.StatusNotImplemented)
-		return
-	}
+	u.handleHeaders(w, r)
+	metric, err := u.getMetricFromRequest(r)
 
 	if err != nil {
+		if err.Error() == "unknown metric type" {
+			http.Error(w, err.Error(), http.StatusNotImplemented)
+			return
+		}
+
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
-}
 
-func (u *UpdateHandler) upsertCounter(metricName string, metricValue string) error {
-	value, err := strconv.ParseInt(metricValue, 10, 64)
+	err = u.upsert(metric)
+
 	if err != nil {
-		return err
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
 	}
 
-	prevValue, _ := u.Repository.GetCounter(metricName)
-
-	return u.Repository.UpsertCounter(CounterMetric{Name: metricName, Value: prevValue + value})
+	err = u.handleBody(w, metric, r.Header.Get("Accept"))
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
 }
 
-func (u *UpdateHandler) upsertGauge(metricName string, metricValue string) error {
-
-	value, err := strconv.ParseFloat(metricValue, 64)
-	if err != nil {
-		return err
+func (u *UpdateHandler) upsert(metric Metrics) (err error) {
+	if MetricTypeGauge == metric.MType {
+		return u.Repository.UpsertGauge(GaugeMetric{Name: metric.ID, Value: *metric.Value})
 	}
 
-	return u.Repository.UpsertGauge(GaugeMetric{Name: metricName, Value: value})
+	if MetricTypeCounter == metric.MType {
+		prevValue, _ := u.Repository.GetCounter(metric.ID)
+
+		return u.Repository.UpsertCounter(CounterMetric{Name: metric.ID, Value: prevValue + *metric.Delta})
+	}
+
+	return errors.New("trying to upsert metric with unknown type, there is an error in logic of checking request")
 }
