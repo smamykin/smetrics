@@ -8,10 +8,11 @@ type GetHandler struct {
 	*Handler
 }
 
-func NewGetHandler(repository IRepository, parameterBag IParametersBag) *GetHandler {
-	return &GetHandler{&Handler{
-		repository,
-		parameterBag,
+func NewGetHandler(repository IRepository, parameterBag IParametersBag, hashGenerator IHashGenerator) *GetHandler {
+	return &GetHandler{Handler: &Handler{
+		Repository:    repository,
+		ParametersBag: parameterBag,
+		HashGenerator: hashGenerator,
 	}}
 }
 

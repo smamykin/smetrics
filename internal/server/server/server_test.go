@@ -3,8 +3,10 @@ package server
 import (
 	"bytes"
 	"compress/gzip"
+	"fmt"
 	"github.com/smamykin/smetrics/internal/server/handlers"
 	"github.com/smamykin/smetrics/internal/server/storage"
+	"github.com/smamykin/smetrics/internal/utils"
 	"github.com/stretchr/testify/require"
 	"io"
 	"net/http"
@@ -63,6 +65,7 @@ func TestRouter(t *testing.T) {
 		name     string
 		requests []requestDefinition
 		expected
+		hashGenerator *utils.HashGenerator
 	}
 
 	tests := map[string]testCase{
@@ -270,10 +273,37 @@ func TestRouter(t *testing.T) {
 		},
 	}
 
+	h := utils.NewHashGenerator("secret key")
+	sign, err := h.Generate(fmt.Sprintf("metric_name3:counter:%d", 11))
+	require.Nil(t, err)
+	body := fmt.Sprintf(`{"id":"metric_name3","type":"counter","delta":11,"hash": "%s"}`, sign)
+	tests["update counter with a sign - success"] = testCase{
+		requests: []requestDefinition{
+			{
+				method:      http.MethodPost,
+				url:         "/update/",
+				body:        body,
+				contentType: "application/json"},
+		},
+		hashGenerator: h,
+		expected: expected{
+			contentType:  "application/json",
+			statusCode:   http.StatusOK,
+			body:         body,
+			counterStore: map[string]handlers.CounterMetric{"metric_name3": {Value: 24, Name: "metric_name3"}},
+			gaugeStore:   map[string]handlers.GaugeMetric{},
+		},
+	}
+
 	for name, tt := range tests {
 		t.Run(name, func(t *testing.T) {
 			repository := storage.NewMemStorageDefault()
-			r := NewRouter(repository)
+			var r http.Handler
+			if tt.hashGenerator == nil {
+				r = NewRouter(repository, nil)
+			} else {
+				r = NewRouter(repository, tt.hashGenerator)
+			}
 			ts := httptest.NewServer(r)
 			defer ts.Close()
 

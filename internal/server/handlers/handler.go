@@ -13,6 +13,7 @@ import (
 type Handler struct {
 	Repository    IRepository
 	ParametersBag IParametersBag
+	HashGenerator IHashGenerator
 }
 
 func (h *Handler) handleHeaders(w http.ResponseWriter, r *http.Request) {
@@ -36,7 +37,7 @@ func (h *Handler) getMetricFromRequest(r *http.Request) (metric Metrics, err err
 		return metric, err
 	}
 
-	_, err = valid.ValidateStruct(&metric)
+	_, err = h.validateMetric(&metric)
 
 	if err != nil {
 		return metric, err
@@ -133,4 +134,40 @@ func (h *Handler) handleBody(w http.ResponseWriter, metric Metrics, acceptHeader
 	}
 
 	return nil
+}
+
+func (h *Handler) validateMetric(metric *Metrics) (bool, error) {
+	if h.HashGenerator == nil {
+		return true, nil
+	}
+
+	if metric.Hash == "" {
+		return false, fmt.Errorf("hash is not correct")
+	}
+
+	if _, ok := valid.CustomTypeTagMap.Get("customHash"); !ok {
+		valid.CustomTypeTagMap.Set("customHash", func(i interface{}, o interface{}) bool {
+			if metric, ok := o.(Metrics); ok {
+				switch metric.MType {
+				case MetricTypeCounter:
+					stringToHash := fmt.Sprintf("%s:%s:%d", metric.ID, metric.MType, *metric.Delta)
+					sign, err := h.HashGenerator.Generate(stringToHash)
+					if err != nil {
+						return false
+					}
+					return h.HashGenerator.Equal(metric.Hash, sign)
+				default:
+					stringToHash := fmt.Sprintf("%s:%s:%f", metric.ID, metric.MType, *metric.Value)
+					sign, err := h.HashGenerator.Generate(stringToHash)
+					if err != nil {
+						return false
+					}
+					return h.HashGenerator.Equal(metric.Hash, sign)
+				}
+			}
+
+			return false
+		})
+	}
+	return valid.ValidateStruct(metric)
 }

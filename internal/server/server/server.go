@@ -6,24 +6,26 @@ import (
 	"net/http"
 )
 
-func NewRouter(repository handlers.IRepository) http.Handler {
+func NewRouter(repository handlers.IRepository, hashGenerator handlers.IHashGenerator) http.Handler {
 	r := chi.NewRouter()
 
 	r.Method("POST", "/update/{metricType}/{metricName}/{metricValue}", handlers.NewUpdateHandler(
 		repository,
 		ParameterBag{},
+		nil,
 	))
 	r.Method("GET", "/value/{metricType}/{metricName}", handlers.NewGetHandler(
 		repository,
 		ParameterBag{},
+		nil,
 	))
 	r.Method("GET", "/", &handlers.ListHandler{
 		Repository: repository,
 	})
 
 	//region JSON-API
-	r.Method("POST", "/update/", handlers.NewUpdateHandler(repository, ParameterBag{}))
-	r.Method("POST", "/value/", handlers.NewGetHandler(repository, ParameterBag{}))
+	r.Method("POST", "/update/", handlers.NewUpdateHandler(repository, ParameterBag{}, hashGenerator))
+	r.Method("POST", "/value/", handlers.NewGetHandler(repository, ParameterBag{}, hashGenerator))
 	//endregion
 
 	return gzipHandle(r)

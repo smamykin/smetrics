@@ -74,7 +74,7 @@ func main() {
 		go utils.InvokeFunctionWithInterval(cfg.StoreInterval, getSaveToFileFunction(memStorage))
 	}
 
-	err = http.ListenAndServe(cfg.Address, server.NewRouter(memStorage))
+	err = http.ListenAndServe(cfg.Address, server.NewRouter(memStorage, utils.NewHashGenerator(cfg.Key)))
 
 	loggerError.Println(err)
 }

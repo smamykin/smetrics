@@ -9,9 +9,9 @@ type UpdateHandler struct {
 	*Handler
 }
 
-func NewUpdateHandler(repository IRepository, parameterBag IParametersBag) *UpdateHandler {
+func NewUpdateHandler(repository IRepository, parameterBag IParametersBag, hashGenerator IHashGenerator) *UpdateHandler {
 	return &UpdateHandler{
-		&Handler{repository, parameterBag},
+		Handler: &Handler{Repository: repository, ParametersBag: parameterBag, HashGenerator: hashGenerator},
 	}
 }
 

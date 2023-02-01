@@ -25,3 +25,16 @@ func (h *HashGenerator) Generate(stringToHash string) (string, error) {
 
 	return hex.EncodeToString(h.Hash.Sum(nil)), nil
 }
+
+func (h *HashGenerator) Equal(hash1 string, hash2 string) bool {
+	mac1, err := hex.DecodeString(hash1)
+	if err != nil {
+		return false
+	}
+	mac2, err := hex.DecodeString(hash2)
+	if err != nil {
+		return false
+	}
+
+	return hmac.Equal(mac1, mac2)
+}
