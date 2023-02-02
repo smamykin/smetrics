@@ -89,31 +89,17 @@ func (h *Handler) getMetricFromURL(r *http.Request) (metric Metrics, err error) 
 }
 
 func (h *Handler) handleBody(w http.ResponseWriter, metric Metrics, acceptHeader string) (err error) {
-	var actualMetric Metrics
+	actualMetric, err := h.getActualMetric(metric)
+	if err != nil {
+		return err
+	}
 
-	switch metric.MType {
-	case MetricTypeCounter:
-		v, err := h.Repository.GetCounter(metric.ID)
+	if h.HashGenerator != nil {
+		sign, err := h.getSign(metric)
 		if err != nil {
 			return err
 		}
-		actualMetric = Metrics{
-			ID:    metric.ID,
-			MType: MetricTypeCounter,
-			Delta: &v,
-		}
-	case MetricTypeGauge:
-		v, err := h.Repository.GetGauge(metric.ID)
-		if err != nil {
-			return err
-		}
-		actualMetric = Metrics{
-			ID:    metric.ID,
-			MType: MetricTypeGauge,
-			Value: &v,
-		}
-	default:
-		return errors.New("trying to get metric with unknown type, there is an error in logic of checking request")
+		actualMetric.Hash = sign
 	}
 
 	if acceptHeader == "application/json" {
@@ -136,6 +122,37 @@ func (h *Handler) handleBody(w http.ResponseWriter, metric Metrics, acceptHeader
 	return nil
 }
 
+func (h *Handler) getActualMetric(metric Metrics) (Metrics, error) {
+	var actualMetric Metrics
+
+	switch metric.MType {
+	case MetricTypeCounter:
+		v, err := h.Repository.GetCounter(metric.ID)
+		if err != nil {
+			return Metrics{}, err
+		}
+		actualMetric = Metrics{
+			ID:    metric.ID,
+			MType: MetricTypeCounter,
+			Delta: &v,
+		}
+	case MetricTypeGauge:
+		v, err := h.Repository.GetGauge(metric.ID)
+		if err != nil {
+			return Metrics{}, err
+		}
+		actualMetric = Metrics{
+			ID:    metric.ID,
+			MType: MetricTypeGauge,
+			Value: &v,
+		}
+	default:
+		return Metrics{}, errors.New("trying to get metric with unknown type, there is an error in logic of checking request")
+	}
+
+	return actualMetric, nil
+}
+
 func (h *Handler) validateMetric(metric *Metrics) (bool, error) {
 	if h.HashGenerator == nil {
 		return true, nil
@@ -148,26 +165,28 @@ func (h *Handler) validateMetric(metric *Metrics) (bool, error) {
 	if _, ok := valid.CustomTypeTagMap.Get("customHash"); !ok {
 		valid.CustomTypeTagMap.Set("customHash", func(i interface{}, o interface{}) bool {
 			if metric, ok := o.(Metrics); ok {
-				switch metric.MType {
-				case MetricTypeCounter:
-					stringToHash := fmt.Sprintf("%s:%s:%d", metric.ID, metric.MType, *metric.Delta)
-					sign, err := h.HashGenerator.Generate(stringToHash)
-					if err != nil {
-						return false
-					}
-					return h.HashGenerator.Equal(metric.Hash, sign)
-				default:
-					stringToHash := fmt.Sprintf("%s:%s:%f", metric.ID, metric.MType, *metric.Value)
-					sign, err := h.HashGenerator.Generate(stringToHash)
-					if err != nil {
-						return false
-					}
-					return h.HashGenerator.Equal(metric.Hash, sign)
+				sign, err := h.getSign(metric)
+				if err != nil {
+					return false
 				}
+
+				return h.HashGenerator.Equal(metric.Hash, sign)
 			}
 
 			return false
 		})
 	}
 	return valid.ValidateStruct(metric)
+}
+
+func (h *Handler) getSign(metric Metrics) (sign string, err error) {
+	switch metric.MType {
+	case MetricTypeCounter:
+		stringToHash := fmt.Sprintf("%s:%s:%d", metric.ID, metric.MType, *metric.Delta)
+		return h.HashGenerator.Generate(stringToHash)
+
+	default:
+		stringToHash := fmt.Sprintf("%s:%s:%f", metric.ID, metric.MType, *metric.Value)
+		return h.HashGenerator.Generate(stringToHash)
+	}
 }
