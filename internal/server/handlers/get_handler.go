@@ -8,11 +8,21 @@ type GetHandler struct {
 	*Handler
 }
 
-func NewGetHandler(repository IRepository, parameterBag IParametersBag, hashGenerator IHashGenerator) *GetHandler {
+func NewGetHandlerDefault(repository IRepository, parameterBag IParametersBag) *GetHandler {
 	return &GetHandler{Handler: &Handler{
-		Repository:    repository,
-		ParametersBag: parameterBag,
-		HashGenerator: hashGenerator,
+		Repository:                  repository,
+		ParametersBag:               parameterBag,
+		HashGenerator:               nil,
+		IsSkipCheckOfHashForRequest: true,
+	}}
+}
+
+func NewGetHandlerWIthHashGenerator(repository IRepository, parameterBag IParametersBag, hashGenerator IHashGenerator, isSkipCheckOfHashForRequest bool) *GetHandler {
+	return &GetHandler{Handler: &Handler{
+		Repository:                  repository,
+		ParametersBag:               parameterBag,
+		HashGenerator:               hashGenerator,
+		IsSkipCheckOfHashForRequest: isSkipCheckOfHashForRequest,
 	}}
 }
 

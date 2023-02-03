@@ -11,9 +11,10 @@ import (
 )
 
 type Handler struct {
-	Repository    IRepository
-	ParametersBag IParametersBag
-	HashGenerator IHashGenerator
+	Repository                  IRepository
+	ParametersBag               IParametersBag
+	HashGenerator               IHashGenerator
+	IsSkipCheckOfHashForRequest bool
 }
 
 func (h *Handler) handleHeaders(w http.ResponseWriter, r *http.Request) {
@@ -95,7 +96,7 @@ func (h *Handler) handleBody(w http.ResponseWriter, metric Metrics, acceptHeader
 	}
 
 	if h.HashGenerator != nil {
-		sign, err := h.getSign(metric)
+		sign, err := h.getSign(actualMetric)
 		if err != nil {
 			return err
 		}
@@ -154,28 +155,23 @@ func (h *Handler) getActualMetric(metric Metrics) (Metrics, error) {
 }
 
 func (h *Handler) validateMetric(metric *Metrics) (bool, error) {
-	if h.HashGenerator == nil {
-		return true, nil
+	if h.IsSkipCheckOfHashForRequest {
+		return valid.ValidateStruct(metric)
 	}
 
 	if metric.Hash == "" {
 		return false, fmt.Errorf("hash is not correct")
 	}
 
-	if _, ok := valid.CustomTypeTagMap.Get("customHash"); !ok {
-		valid.CustomTypeTagMap.Set("customHash", func(i interface{}, o interface{}) bool {
-			if metric, ok := o.(Metrics); ok {
-				sign, err := h.getSign(metric)
-				if err != nil {
-					return false
-				}
-
-				return h.HashGenerator.Equal(metric.Hash, sign)
-			}
-
-			return false
-		})
+	sign, err := h.getSign(*metric)
+	if err != nil {
+		return false, err
 	}
+
+	if !h.HashGenerator.Equal(metric.Hash, sign) {
+		return false, fmt.Errorf("hash is not correct")
+	}
+
 	return valid.ValidateStruct(metric)
 }
 

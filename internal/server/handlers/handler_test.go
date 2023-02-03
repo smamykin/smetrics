@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/asaskevich/govalidator"
 	"github.com/smamykin/smetrics/internal/utils"
 	"github.com/stretchr/testify/require"
 	"io"
@@ -32,14 +31,14 @@ func TestGetMetricFromRequest(t *testing.T) {
 		ID:    "metric_name3",
 		Value: &expectedValue,
 	}
-	tests["json. update for gauge"] = testCase{
+	tests["json - update for gauge"] = testCase{
 		request:        newJSONRequest(expected),
-		updateHandler:  NewUpdateHandler(RepositoryMock{}, ParametersBagMock{}, nil),
+		updateHandler:  NewUpdateHandlerDefault(RepositoryMock{}, ParametersBagMock{}),
 		expectedMetric: expected,
 	}
-	tests["text. update for gauge"] = testCase{
+	tests["text - update for gauge"] = testCase{
 		request: &http.Request{},
-		updateHandler: NewUpdateHandler(
+		updateHandler: NewUpdateHandlerDefault(
 			RepositoryMock{},
 			ParametersBagMock{
 				parameters: map[string]string{
@@ -48,7 +47,6 @@ func TestGetMetricFromRequest(t *testing.T) {
 					paramNameMetricValue: fmt.Sprint(expectedValue),
 				},
 			},
-			nil,
 		),
 		expectedMetric: expected,
 	}
@@ -58,9 +56,9 @@ func TestGetMetricFromRequest(t *testing.T) {
 		ID:    "metric_name4",
 		Delta: &expectedDelta,
 	}
-	tests["json. update for counter"] = testCase{
+	tests["json - update for counter"] = testCase{
 		request:        newJSONRequest(expected),
-		updateHandler:  NewUpdateHandler(RepositoryMock{}, ParametersBagMock{}, nil),
+		updateHandler:  NewUpdateHandlerDefault(RepositoryMock{}, ParametersBagMock{}),
 		expectedMetric: expected,
 	}
 
@@ -74,9 +72,9 @@ func TestGetMetricFromRequest(t *testing.T) {
 		Value: &expectedValue,
 		Hash:  sign,
 	}
-	tests["with sign. gauge counter. success"] = testCase{
+	tests["with sign - gauge counter - success"] = testCase{
 		request:        newJSONRequest(expected),
-		updateHandler:  NewUpdateHandler(RepositoryMock{}, ParametersBagMock{}, h),
+		updateHandler:  NewUpdateHandlerWithHashGenerator(RepositoryMock{}, ParametersBagMock{}, h, false),
 		expectedMetric: expected,
 	}
 
@@ -88,22 +86,20 @@ func TestGetMetricFromRequest(t *testing.T) {
 		Value: &expectedValue,
 		Hash:  wrongSign,
 	}
-	tests["with sign. update gauge. fail because of wrong hash"] = testCase{
+	tests["with sign - update gauge - fail because of wrong hash"] = testCase{
 		request:        newJSONRequest(expected),
-		updateHandler:  NewUpdateHandler(RepositoryMock{}, ParametersBagMock{}, h),
+		updateHandler:  NewUpdateHandlerWithHashGenerator(RepositoryMock{}, ParametersBagMock{}, h, false),
 		expectedMetric: expected,
-		expectedError: govalidator.Errors{govalidator.Errors{
-			govalidator.Error{Name: "hash", Err: errors.New("hash is not correct"), Validator: "customHash", CustomErrorMessageExists: true},
-		}},
+		expectedError:  fmt.Errorf("hash is not correct"),
 	}
 	expected = Metrics{
 		MType: MetricTypeGauge,
 		ID:    "metric_name4",
 		Value: &expectedValue,
 	}
-	tests["with sign. update gauge. fail because of empty hash"] = testCase{
+	tests["with sign - update gauge - fail because of empty hash"] = testCase{
 		request:        newJSONRequest(expected),
-		updateHandler:  NewUpdateHandler(RepositoryMock{}, ParametersBagMock{}, h),
+		updateHandler:  NewUpdateHandlerWithHashGenerator(RepositoryMock{}, ParametersBagMock{}, h, false),
 		expectedMetric: expected,
 		expectedError:  errors.New("hash is not correct"),
 	}
@@ -116,9 +112,9 @@ func TestGetMetricFromRequest(t *testing.T) {
 		Delta: &expectedDelta,
 		Hash:  sign,
 	}
-	tests["with sign. update counter. success"] = testCase{
+	tests["with sign - update counter - success"] = testCase{
 		request:        newJSONRequest(expected),
-		updateHandler:  NewUpdateHandler(RepositoryMock{}, ParametersBagMock{}, h),
+		updateHandler:  NewUpdateHandlerWithHashGenerator(RepositoryMock{}, ParametersBagMock{}, h, false),
 		expectedMetric: expected,
 	}
 
@@ -130,22 +126,20 @@ func TestGetMetricFromRequest(t *testing.T) {
 		Delta: &expectedDelta,
 		Hash:  wrongSign,
 	}
-	tests["with sign. update counter. fail because of wrong hash"] = testCase{
+	tests["with sign - update counter - fail because of wrong hash"] = testCase{
 		request:        newJSONRequest(expected),
-		updateHandler:  NewUpdateHandler(RepositoryMock{}, ParametersBagMock{}, h),
+		updateHandler:  NewUpdateHandlerWithHashGenerator(RepositoryMock{}, ParametersBagMock{}, h, false),
 		expectedMetric: expected,
-		expectedError: govalidator.Errors{govalidator.Errors{
-			govalidator.Error{Name: "hash", Err: errors.New("hash is not correct"), Validator: "customHash", CustomErrorMessageExists: true},
-		}},
+		expectedError:  fmt.Errorf("hash is not correct"),
 	}
 	expected = Metrics{
 		MType: MetricTypeCounter,
 		ID:    "metric_name4",
 		Delta: &expectedDelta,
 	}
-	tests["with sign. update counter. fail because of empty hash"] = testCase{
+	tests["with sign - update counter - fail because of empty hash"] = testCase{
 		request:        newJSONRequest(expected),
-		updateHandler:  NewUpdateHandler(RepositoryMock{}, ParametersBagMock{}, h),
+		updateHandler:  NewUpdateHandlerWithHashGenerator(RepositoryMock{}, ParametersBagMock{}, h, false),
 		expectedMetric: expected,
 		expectedError:  errors.New("hash is not correct"),
 	}
@@ -155,9 +149,9 @@ func TestGetMetricFromRequest(t *testing.T) {
 		ID:    "metric_name4",
 		Delta: &expectedDelta,
 	}
-	tests["text. update for counter"] = testCase{
+	tests["text - update for counter"] = testCase{
 		request: &http.Request{},
-		updateHandler: NewUpdateHandler(
+		updateHandler: NewUpdateHandlerDefault(
 			RepositoryMock{},
 			ParametersBagMock{
 				parameters: map[string]string{
@@ -166,7 +160,6 @@ func TestGetMetricFromRequest(t *testing.T) {
 					paramNameMetricValue: fmt.Sprint(expectedDelta),
 				},
 			},
-			nil,
 		),
 		expectedMetric: expected,
 	}
@@ -175,14 +168,14 @@ func TestGetMetricFromRequest(t *testing.T) {
 		MType: MetricTypeGauge,
 		ID:    "metric_name3",
 	}
-	tests["json. get for gauge"] = testCase{
+	tests["json - get for gauge"] = testCase{
 		request:        newJSONRequest(expected),
-		updateHandler:  NewUpdateHandler(RepositoryMock{}, ParametersBagMock{}, nil),
+		updateHandler:  NewUpdateHandlerDefault(RepositoryMock{}, ParametersBagMock{}),
 		expectedMetric: expected,
 	}
-	tests["text. get for gauge"] = testCase{
+	tests["text - get for gauge"] = testCase{
 		request: &http.Request{},
-		updateHandler: NewUpdateHandler(
+		updateHandler: NewUpdateHandlerDefault(
 			RepositoryMock{},
 			ParametersBagMock{
 				parameters: map[string]string{
@@ -190,7 +183,6 @@ func TestGetMetricFromRequest(t *testing.T) {
 					paramNameMetricName: expected.ID,
 				},
 			},
-			nil,
 		),
 		expectedMetric: expected,
 	}

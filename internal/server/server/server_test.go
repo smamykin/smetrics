@@ -295,6 +295,29 @@ func TestRouter(t *testing.T) {
 			gaugeStore:   map[string]handlers.GaugeMetric{},
 		},
 	}
+	tests["get counter with a sign - success"] = testCase{
+		requests: []requestDefinition{
+			{
+				method:      http.MethodPost,
+				url:         "/update/",
+				body:        body,
+				contentType: "application/json",
+			},
+			{
+				method:      http.MethodPost,
+				url:         "/value/",
+				body:        `{"id":"metric_name3","type":"counter"}`,
+				contentType: "application/json"},
+		},
+		hashGenerator: h,
+		expected: expected{
+			contentType:  "application/json",
+			statusCode:   http.StatusOK,
+			body:         body,
+			counterStore: map[string]handlers.CounterMetric{"metric_name3": {Value: 11, Name: "metric_name3"}},
+			gaugeStore:   map[string]handlers.GaugeMetric{},
+		},
+	}
 	sign, err = h.Generate(fmt.Sprintf("metric_name3:gauge:%f", 11.12))
 	require.Nil(t, err)
 	body = fmt.Sprintf(`{"id":"metric_name3","type":"gauge","value":11.12,"hash":"%s"}`, sign)

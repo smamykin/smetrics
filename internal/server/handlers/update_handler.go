@@ -9,9 +9,25 @@ type UpdateHandler struct {
 	*Handler
 }
 
-func NewUpdateHandler(repository IRepository, parameterBag IParametersBag, hashGenerator IHashGenerator) *UpdateHandler {
+func NewUpdateHandlerDefault(repository IRepository, parameterBag IParametersBag) *UpdateHandler {
 	return &UpdateHandler{
-		Handler: &Handler{Repository: repository, ParametersBag: parameterBag, HashGenerator: hashGenerator},
+		Handler: &Handler{
+			Repository:                  repository,
+			ParametersBag:               parameterBag,
+			HashGenerator:               nil,
+			IsSkipCheckOfHashForRequest: true,
+		},
+	}
+}
+
+func NewUpdateHandlerWithHashGenerator(repository IRepository, parameterBag IParametersBag, hashGenerator IHashGenerator, isSkipCheckOfHashForRequest bool) *UpdateHandler {
+	return &UpdateHandler{
+		Handler: &Handler{
+			Repository:                  repository,
+			ParametersBag:               parameterBag,
+			HashGenerator:               hashGenerator,
+			IsSkipCheckOfHashForRequest: isSkipCheckOfHashForRequest,
+		},
 	}
 }
 
