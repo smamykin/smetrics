@@ -81,7 +81,7 @@ func main() {
 	r := chi.NewRouter()
 
 	var repository handlers.IRepository
-	if cfg.DatabaseDsn == "" {
+	if cfg.DatabaseDsn != "" {
 		//region database connection setup
 		db, err := sql.Open("pgx", cfg.DatabaseDsn)
 		if err != nil {
