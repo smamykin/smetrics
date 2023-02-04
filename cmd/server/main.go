@@ -8,6 +8,7 @@ import (
 	"github.com/caarlos0/env/v6"
 	"github.com/go-chi/chi/v5"
 	_ "github.com/jackc/pgx/v5/stdlib"
+	"github.com/smamykin/smetrics/internal/server/handlers"
 	"github.com/smamykin/smetrics/internal/server/server"
 	"github.com/smamykin/smetrics/internal/server/storage"
 	"github.com/smamykin/smetrics/internal/utils"
@@ -32,7 +33,7 @@ const (
 	defaultStoreFile     = "/tmp/devops-metrics-db.json"
 	defaultStoreInterval = time.Second * 300
 	defaultKey           = ""
-	defaultDatabaseDsn   = "postgres://postgres:postgres@localhost:54323/postgres"
+	defaultDatabaseDsn   = ""
 )
 
 var loggerInfo = log.New(os.Stdout, "INFO:    ", log.Ldate|log.Ltime)
@@ -75,32 +76,47 @@ func main() {
 
 	fmt.Printf("Starting the server. The configuration: %#v\n", cfg)
 
-	memStorage, err := storage.NewMemStorage(cfg.StoreFile, cfg.Restore, cfg.StoreInterval.Seconds() == 0)
-	if err != nil {
-		loggerError.Printf("Cannot create memStorage. Error: %s\n", err.Error())
-	}
-	memStorage.AddObserver(storage.GetLoggerObserver(loggerInfo))
-
-	if storeInterval.Seconds() != 0 {
-		go utils.InvokeFunctionWithInterval(cfg.StoreInterval, getSaveToFileFunction(memStorage))
-	}
+	//var repository handlers.IRepository
 
 	r := chi.NewRouter()
 
-	//region database connection setup
-	db, err := sql.Open("pgx", cfg.DatabaseDsn)
-	if err != nil {
-		panic(err)
-	}
-	defer db.Close()
+	var repository handlers.IRepository
+	if cfg.DatabaseDsn == "" {
+		//region database connection setup
+		db, err := sql.Open("pgx", cfg.DatabaseDsn)
+		if err != nil {
+			loggerError.Printf("Cannot connect to db. Error: %s\n", err.Error())
+			return
+		}
+		defer db.Close()
 
-	addProbeEndpoint(r, db)
-	//endregion
+		addProbeEndpoint(r, db)
+		//endregion
+		dbStorage, err := storage.NewDbStorage(db)
+		if err != nil {
+			loggerError.Printf("Cannot create dbStorage. Error: %s\n", err.Error())
+			return
+		}
+		dbStorage.AddObserver(storage.GetLoggerObserver(loggerInfo))
+
+		repository = dbStorage
+	} else {
+		memStorage, err := storage.NewMemStorage(cfg.StoreFile, cfg.Restore, cfg.StoreInterval.Seconds() == 0)
+		if err != nil {
+			loggerError.Printf("Cannot create memStorage. Error: %s\n", err.Error())
+		}
+		memStorage.AddObserver(storage.GetLoggerObserver(loggerInfo))
+
+		if storeInterval.Seconds() != 0 {
+			go utils.InvokeFunctionWithInterval(cfg.StoreInterval, getSaveToFileFunction(memStorage))
+		}
+		repository = memStorage
+	}
 
 	if cfg.Key == "" {
-		err = http.ListenAndServe(cfg.Address, server.AddHandlers(r, memStorage, nil))
+		err = http.ListenAndServe(cfg.Address, server.AddHandlers(r, repository, nil))
 	} else {
-		err = http.ListenAndServe(cfg.Address, server.AddHandlers(r, memStorage, utils.NewHashGenerator(cfg.Key)))
+		err = http.ListenAndServe(cfg.Address, server.AddHandlers(r, repository, utils.NewHashGenerator(cfg.Key)))
 	}
 
 	loggerError.Println(err)
