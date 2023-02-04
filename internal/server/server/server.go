@@ -1,16 +1,12 @@
 package server
 
 import (
-	"context"
-	"database/sql"
 	"github.com/go-chi/chi/v5"
 	"github.com/smamykin/smetrics/internal/server/handlers"
 	"net/http"
-	"time"
 )
 
-func NewRouter(repository handlers.IRepository, hashGenerator handlers.IHashGenerator, db *sql.DB) http.Handler {
-	r := chi.NewRouter()
+func AddHandlers(r *chi.Mux, repository handlers.IRepository, hashGenerator handlers.IHashGenerator) http.Handler {
 
 	r.Method("POST", "/update/{metricType}/{metricName}/{metricValue}", handlers.NewUpdateHandlerDefault(
 		repository,
@@ -27,16 +23,6 @@ func NewRouter(repository handlers.IRepository, hashGenerator handlers.IHashGene
 	//region JSON-API
 	r.Method("POST", "/update/", handlers.NewUpdateHandlerWithHashGenerator(repository, ParameterBag{}, hashGenerator, hashGenerator == nil))
 	r.Method("POST", "/value/", handlers.NewGetHandlerWIthHashGenerator(repository, ParameterBag{}, hashGenerator, true))
-	//endregion
-
-	//region probe
-	r.Method("GET", "/ping", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		ctx, cancel := context.WithTimeout(r.Context(), 1*time.Second)
-		defer cancel()
-		if err := db.PingContext(ctx); err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-		}
-	}))
 	//endregion
 
 	return gzipHandle(r)

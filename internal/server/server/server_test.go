@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"compress/gzip"
 	"fmt"
+	"github.com/go-chi/chi/v5"
 	"github.com/smamykin/smetrics/internal/server/handlers"
 	"github.com/smamykin/smetrics/internal/server/storage"
 	"github.com/smamykin/smetrics/internal/utils"
@@ -369,9 +370,9 @@ func TestRouter(t *testing.T) {
 			repository := storage.NewMemStorageDefault()
 			var r http.Handler
 			if tt.hashGenerator == nil {
-				r = NewRouter(repository, nil)
+				r = AddHandlers(chi.NewRouter(), repository, nil)
 			} else {
-				r = NewRouter(repository, tt.hashGenerator)
+				r = AddHandlers(chi.NewRouter(), repository, tt.hashGenerator)
 			}
 			ts := httptest.NewServer(r)
 			defer ts.Close()

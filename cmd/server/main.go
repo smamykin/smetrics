@@ -1,10 +1,12 @@
 package main
 
 import (
+	"context"
 	"database/sql"
 	"flag"
 	"fmt"
 	"github.com/caarlos0/env/v6"
+	"github.com/go-chi/chi/v5"
 	_ "github.com/jackc/pgx/v5/stdlib"
 	"github.com/smamykin/smetrics/internal/server/server"
 	"github.com/smamykin/smetrics/internal/server/storage"
@@ -73,14 +75,6 @@ func main() {
 
 	fmt.Printf("Starting the server. The configuration: %#v\n", cfg)
 
-	//region database connection setup
-	db, err := sql.Open("pgx", cfg.DatabaseDsn)
-	if err != nil {
-		panic(err)
-	}
-	defer db.Close()
-	//endregion
-
 	memStorage, err := storage.NewMemStorage(cfg.StoreFile, cfg.Restore, cfg.StoreInterval.Seconds() == 0)
 	if err != nil {
 		loggerError.Printf("Cannot create memStorage. Error: %s\n", err.Error())
@@ -91,13 +85,35 @@ func main() {
 		go utils.InvokeFunctionWithInterval(cfg.StoreInterval, getSaveToFileFunction(memStorage))
 	}
 
+	r := chi.NewRouter()
+
+	//region database connection setup
+	db, err := sql.Open("pgx", cfg.DatabaseDsn)
+	if err != nil {
+		panic(err)
+	}
+	defer db.Close()
+
+	addProbeEndpoint(r, db)
+	//endregion
+
 	if cfg.Key == "" {
-		err = http.ListenAndServe(cfg.Address, server.NewRouter(memStorage, nil, db))
+		err = http.ListenAndServe(cfg.Address, server.AddHandlers(r, memStorage, nil))
 	} else {
-		err = http.ListenAndServe(cfg.Address, server.NewRouter(memStorage, utils.NewHashGenerator(cfg.Key), db))
+		err = http.ListenAndServe(cfg.Address, server.AddHandlers(r, memStorage, utils.NewHashGenerator(cfg.Key)))
 	}
 
 	loggerError.Println(err)
+}
+
+func addProbeEndpoint(r *chi.Mux, db *sql.DB) {
+	r.Method("GET", "/ping", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		ctx, cancel := context.WithTimeout(r.Context(), 1*time.Second)
+		defer cancel()
+		if err := db.PingContext(ctx); err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+		}
+	}))
 }
 
 func getSaveToFileFunction(memStorage *storage.MemStorage) func() {
