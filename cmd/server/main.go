@@ -92,7 +92,7 @@ func main() {
 
 		addProbeEndpoint(r, db)
 		//endregion
-		dbStorage, err := storage.NewDbStorage(db)
+		dbStorage, err := storage.NewDBStorage(db)
 		if err != nil {
 			loggerError.Printf("Cannot create dbStorage. Error: %s\n", err.Error())
 			return

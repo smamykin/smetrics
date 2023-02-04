@@ -10,17 +10,17 @@ import (
 	"testing"
 )
 
-func TestDbStorage_GetAllCounters(t *testing.T) {
-	skipIfNoDatabaseUrl(t)
+func TestDBStorage_GetAllCounters(t *testing.T) {
+	skipIfNoDatabaseURL(t)
 
 	db, err := sql.Open("pgx", os.Getenv("DATABASE_URL"))
 	require.Nil(t, err)
 	defer db.Close()
 
-	dbStorage, err := NewDbStorage(db)
+	dbStorage, err := NewDBStorage(db)
 	require.Nil(t, err)
 
-	prepareDbBeforeTest(db, t)
+	prepareDBBeforeTest(db, t)
 
 	counters, err := dbStorage.GetAllCounters()
 	require.Nil(t, err)
@@ -31,17 +31,17 @@ func TestDbStorage_GetAllCounters(t *testing.T) {
 	}, counters)
 }
 
-func TestDbStorage_GetAllGauge(t *testing.T) {
-	skipIfNoDatabaseUrl(t)
+func TestDBStorage_GetAllGauge(t *testing.T) {
+	skipIfNoDatabaseURL(t)
 
 	db, err := sql.Open("pgx", os.Getenv("DATABASE_URL"))
 	require.Nil(t, err)
 	defer db.Close()
 
-	dbStorage, err := NewDbStorage(db)
+	dbStorage, err := NewDBStorage(db)
 	require.Nil(t, err)
 
-	prepareDbBeforeTest(db, t)
+	prepareDBBeforeTest(db, t)
 
 	counters, err := dbStorage.GetAllGauge()
 	require.Nil(t, err)
@@ -52,16 +52,16 @@ func TestDbStorage_GetAllGauge(t *testing.T) {
 	}, counters)
 }
 
-func TestDbStorage_GetCounter(t *testing.T) {
-	skipIfNoDatabaseUrl(t)
+func TestDBStorage_GetCounter(t *testing.T) {
+	skipIfNoDatabaseURL(t)
 
 	db, err := sql.Open("pgx", os.Getenv("DATABASE_URL"))
 	require.Nil(t, err)
 	defer db.Close()
 
-	dbStorage, err := NewDbStorage(db)
+	dbStorage, err := NewDBStorage(db)
 	require.Nil(t, err)
-	prepareDbBeforeTest(db, t)
+	prepareDBBeforeTest(db, t)
 
 	counter, err := dbStorage.GetCounter("metric-a")
 	require.Nil(t, err)
@@ -71,16 +71,16 @@ func TestDbStorage_GetCounter(t *testing.T) {
 	require.NotNil(t, err)
 }
 
-func TestDbStorage_GetGauge(t *testing.T) {
-	skipIfNoDatabaseUrl(t)
+func TestDBStorage_GetGauge(t *testing.T) {
+	skipIfNoDatabaseURL(t)
 
 	db, err := sql.Open("pgx", os.Getenv("DATABASE_URL"))
 	require.Nil(t, err)
 	defer db.Close()
 
-	dbStorage, err := NewDbStorage(db)
+	dbStorage, err := NewDBStorage(db)
 	require.Nil(t, err)
-	prepareDbBeforeTest(db, t)
+	prepareDBBeforeTest(db, t)
 
 	counter, err := dbStorage.GetGauge("metric-c")
 	require.Nil(t, err)
@@ -90,16 +90,16 @@ func TestDbStorage_GetGauge(t *testing.T) {
 	require.NotNil(t, err)
 }
 
-func TestDbStorage_UpsertCounter(t *testing.T) {
-	skipIfNoDatabaseUrl(t)
+func TestDBStorage_UpsertCounter(t *testing.T) {
+	skipIfNoDatabaseURL(t)
 
 	db, err := sql.Open("pgx", os.Getenv("DATABASE_URL"))
 	require.Nil(t, err)
 	defer db.Close()
 
-	dbStorage, err := NewDbStorage(db)
+	dbStorage, err := NewDBStorage(db)
 	require.Nil(t, err)
-	prepareDbBeforeTest(db, t)
+	prepareDBBeforeTest(db, t)
 
 	//insert
 	metric := handlers.CounterMetric{Name: "metric-z", Value: 222}
@@ -121,16 +121,16 @@ func TestDbStorage_UpsertCounter(t *testing.T) {
 
 }
 
-func TestDbStorage_UpsertGauge(t *testing.T) {
-	skipIfNoDatabaseUrl(t)
+func TestDBStorage_UpsertGauge(t *testing.T) {
+	skipIfNoDatabaseURL(t)
 
 	db, err := sql.Open("pgx", os.Getenv("DATABASE_URL"))
 	require.Nil(t, err)
 	defer db.Close()
 
-	dbStorage, err := NewDbStorage(db)
+	dbStorage, err := NewDBStorage(db)
 	require.Nil(t, err)
-	prepareDbBeforeTest(db, t)
+	prepareDBBeforeTest(db, t)
 
 	//insert
 	metric := handlers.GaugeMetric{Name: "metric-z", Value: 222.333}
@@ -152,8 +152,8 @@ func TestDbStorage_UpsertGauge(t *testing.T) {
 
 }
 
-func TestDbStorage_init(t *testing.T) {
-	skipIfNoDatabaseUrl(t)
+func TestDBStorage_init(t *testing.T) {
+	skipIfNoDatabaseURL(t)
 
 	db, err := sql.Open("pgx", os.Getenv("DATABASE_URL"))
 	if err != nil {
@@ -162,7 +162,7 @@ func TestDbStorage_init(t *testing.T) {
 	defer db.Close()
 	dropTableIfExists(db, t)
 
-	dbStorage := DbStorage{db, nil}
+	dbStorage := DBStorage{db, nil}
 	err = dbStorage.init()
 	if err != nil {
 		t.Error(err)
@@ -170,7 +170,7 @@ func TestDbStorage_init(t *testing.T) {
 	assertTableExist(db, t)
 
 	//second run, table already exists
-	dbStorage = DbStorage{db, nil}
+	dbStorage = DBStorage{db, nil}
 	err = dbStorage.init()
 	if err != nil {
 		t.Error(err)
@@ -191,7 +191,7 @@ func assertTableExist(db *sql.DB, t *testing.T) {
 
 }
 
-func skipIfNoDatabaseUrl(t *testing.T) {
+func skipIfNoDatabaseURL(t *testing.T) {
 	if os.Getenv("DATABASE_URL") == "" {
 		t.Skip("Skipping integration test with db.")
 	}
@@ -212,7 +212,7 @@ func truncateTable(db *sql.DB, t *testing.T) {
 	}
 }
 
-func prepareDbBeforeTest(db *sql.DB, t *testing.T) {
+func prepareDBBeforeTest(db *sql.DB, t *testing.T) {
 	truncateTable(db, t)
 	_, err := db.Exec(`
 		INSERT INTO metric (name, type, delta, value) 

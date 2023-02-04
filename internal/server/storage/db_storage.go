@@ -5,21 +5,21 @@ import (
 	"github.com/smamykin/smetrics/internal/server/handlers"
 )
 
-func NewDbStorage(db *sql.DB) (*DbStorage, error) {
-	result := &DbStorage{db: db}
+func NewDBStorage(db *sql.DB) (*DBStorage, error) {
+	result := &DBStorage{db: db}
 	err := result.init()
 	return result, err
 }
 
-type DbStorage struct {
+type DBStorage struct {
 	db        *sql.DB
 	observers []Observer
 }
 
-func (d *DbStorage) init() error {
-	tableExistsSql := "SELECT EXISTS ( SELECT FROM pg_tables WHERE tablename  = 'metric');"
+func (d *DBStorage) init() error {
+	tableExistsSQL := "SELECT EXISTS ( SELECT FROM pg_tables WHERE tablename  = 'metric');"
 	var isTableExists bool
-	err := d.db.QueryRow(tableExistsSql).Scan(&isTableExists)
+	err := d.db.QueryRow(tableExistsSQL).Scan(&isTableExists)
 	if err != nil {
 		return err
 	}
@@ -39,14 +39,14 @@ func (d *DbStorage) init() error {
 	return nil
 }
 
-func (d *DbStorage) UpsertGauge(metric handlers.GaugeMetric) error {
-	upsertSql := `
+func (d *DBStorage) UpsertGauge(metric handlers.GaugeMetric) error {
+	upsertSQL := `
 		INSERT INTO metric (name, type, value) 
 		VALUES ($1, $2, $3)
 		ON CONFLICT (name, type) DO UPDATE 
 		    SET value = EXCLUDED.value
 	`
-	_, err := d.db.Exec(upsertSql, metric.Name, handlers.MetricTypeGauge, metric.Value)
+	_, err := d.db.Exec(upsertSQL, metric.Name, handlers.MetricTypeGauge, metric.Value)
 
 	if err != nil {
 		return err
@@ -57,14 +57,14 @@ func (d *DbStorage) UpsertGauge(metric handlers.GaugeMetric) error {
 	})
 }
 
-func (d *DbStorage) UpsertCounter(metric handlers.CounterMetric) error {
-	upsertSql := `
+func (d *DBStorage) UpsertCounter(metric handlers.CounterMetric) error {
+	upsertSQL := `
 		INSERT INTO metric (name, type, delta) 
 		VALUES ($1, $2, $3)
 		ON CONFLICT (name, type) DO UPDATE 
 		    SET delta = EXCLUDED.delta
 	`
-	_, err := d.db.Exec(upsertSql, metric.Name, handlers.MetricTypeCounter, metric.Value)
+	_, err := d.db.Exec(upsertSQL, metric.Name, handlers.MetricTypeCounter, metric.Value)
 	if err != nil {
 		return err
 	}
@@ -74,13 +74,13 @@ func (d *DbStorage) UpsertCounter(metric handlers.CounterMetric) error {
 	})
 }
 
-func (d *DbStorage) GetGauge(name string) (float64, error) {
-	getOneSql := `
+func (d *DBStorage) GetGauge(name string) (float64, error) {
+	getOneSQL := `
 		SELECT value
 		FROM metric
 		WHERE type = $1 AND name = $2
 	`
-	row := d.db.QueryRow(getOneSql, handlers.MetricTypeGauge, name)
+	row := d.db.QueryRow(getOneSQL, handlers.MetricTypeGauge, name)
 	if row.Err() != nil {
 		return 0, row.Err()
 	}
@@ -93,13 +93,13 @@ func (d *DbStorage) GetGauge(name string) (float64, error) {
 	return gauge, nil
 }
 
-func (d *DbStorage) GetCounter(name string) (int64, error) {
-	getOneSql := `
+func (d *DBStorage) GetCounter(name string) (int64, error) {
+	getOneSQL := `
 		SELECT delta
 		FROM metric
 		WHERE type = $1 AND name = $2
 	`
-	row := d.db.QueryRow(getOneSql, handlers.MetricTypeCounter, name)
+	row := d.db.QueryRow(getOneSQL, handlers.MetricTypeCounter, name)
 	if row.Err() != nil {
 		return 0, row.Err()
 	}
@@ -112,7 +112,7 @@ func (d *DbStorage) GetCounter(name string) (int64, error) {
 	return counter, nil
 }
 
-func (d *DbStorage) GetAllGauge() (metrics []handlers.GaugeMetric, err error) {
+func (d *DBStorage) GetAllGauge() (metrics []handlers.GaugeMetric, err error) {
 	getAllSql := `
 		SELECT name, value
 		FROM metric
@@ -142,7 +142,7 @@ func (d *DbStorage) GetAllGauge() (metrics []handlers.GaugeMetric, err error) {
 	return metrics, err
 }
 
-func (d *DbStorage) GetAllCounters() (metrics []handlers.CounterMetric, err error) {
+func (d *DBStorage) GetAllCounters() (metrics []handlers.CounterMetric, err error) {
 	getAllSql := `
 		SELECT name, delta
 		FROM metric
@@ -172,11 +172,11 @@ func (d *DbStorage) GetAllCounters() (metrics []handlers.CounterMetric, err erro
 	return metrics, err
 }
 
-func (d *DbStorage) AddObserver(o Observer) {
+func (d *DBStorage) AddObserver(o Observer) {
 	d.observers = append(d.observers, o)
 }
 
-func (d *DbStorage) notifyObservers(event IEvent) error {
+func (d *DBStorage) notifyObservers(event IEvent) error {
 	for _, observer := range d.observers {
 		if err := observer.HandleEvent(event); err != nil {
 			return err
