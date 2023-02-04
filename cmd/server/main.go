@@ -1,9 +1,11 @@
 package main
 
 import (
+	"database/sql"
 	"flag"
 	"fmt"
 	"github.com/caarlos0/env/v6"
+	_ "github.com/jackc/pgx/v5/stdlib"
 	"github.com/smamykin/smetrics/internal/server/server"
 	"github.com/smamykin/smetrics/internal/server/storage"
 	"github.com/smamykin/smetrics/internal/utils"
@@ -19,6 +21,7 @@ type Config struct {
 	StoreFile     string        `env:"STORE_FILE"`
 	StoreInterval time.Duration `env:"STORE_INTERVAL"`
 	Key           string        `env:"KEY"`
+	DatabaseDsn   string        `env:"DATABASE_DSN"`
 }
 
 const (
@@ -27,17 +30,20 @@ const (
 	defaultStoreFile     = "/tmp/devops-metrics-db.json"
 	defaultStoreInterval = time.Second * 300
 	defaultKey           = ""
+	defaultDatabaseDsn   = "postgres://postgres:postgres@localhost:54323/postgres"
 )
 
 var loggerInfo = log.New(os.Stdout, "INFO:    ", log.Ldate|log.Ltime)
 var loggerError = log.New(os.Stdout, "ERROR:   ", log.Ldate|log.Ltime)
 
 func main() {
+
 	address := flag.String("a", defaultAddress, "The address of the server")
 	restore := flag.Bool("r", defaultRestore, "To restore the dump from the file")
 	storeFile := flag.String("f", defaultStoreFile, "the absolute path to the dump file.")
 	storeInterval := flag.Duration("i", defaultStoreInterval, "How often to save the dump of the metrics")
 	key := flag.String("k", defaultKey, "The secret key")
+	databaseDsn := flag.String("d", defaultDatabaseDsn, "The database url")
 	flag.Parse()
 
 	var cfg Config
@@ -61,8 +67,19 @@ func main() {
 	if _, isPresent := os.LookupEnv("KEY"); !isPresent {
 		cfg.Key = *key
 	}
+	if _, isPresent := os.LookupEnv("DATABASE_DSN"); !isPresent {
+		cfg.DatabaseDsn = *databaseDsn
+	}
 
 	fmt.Printf("Starting the server. The configuration: %#v\n", cfg)
+
+	//region database connection setup
+	db, err := sql.Open("pgx", cfg.DatabaseDsn)
+	if err != nil {
+		panic(err)
+	}
+	defer db.Close()
+	//endregion
 
 	memStorage, err := storage.NewMemStorage(cfg.StoreFile, cfg.Restore, cfg.StoreInterval.Seconds() == 0)
 	if err != nil {
@@ -75,9 +92,9 @@ func main() {
 	}
 
 	if cfg.Key == "" {
-		err = http.ListenAndServe(cfg.Address, server.NewRouter(memStorage, nil))
+		err = http.ListenAndServe(cfg.Address, server.NewRouter(memStorage, nil, db))
 	} else {
-		err = http.ListenAndServe(cfg.Address, server.NewRouter(memStorage, utils.NewHashGenerator(cfg.Key)))
+		err = http.ListenAndServe(cfg.Address, server.NewRouter(memStorage, utils.NewHashGenerator(cfg.Key), db))
 	}
 
 	loggerError.Println(err)
