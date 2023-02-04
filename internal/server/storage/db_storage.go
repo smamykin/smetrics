@@ -113,12 +113,12 @@ func (d *DBStorage) GetCounter(name string) (int64, error) {
 }
 
 func (d *DBStorage) GetAllGauge() (metrics []handlers.GaugeMetric, err error) {
-	getAllSql := `
+	getAllSQL := `
 		SELECT name, value
 		FROM metric
 		WHERE type = $1
 	`
-	rows, err := d.db.Query(getAllSql, handlers.MetricTypeGauge)
+	rows, err := d.db.Query(getAllSQL, handlers.MetricTypeGauge)
 	if err != nil {
 		return nil, err
 	}
@@ -143,12 +143,12 @@ func (d *DBStorage) GetAllGauge() (metrics []handlers.GaugeMetric, err error) {
 }
 
 func (d *DBStorage) GetAllCounters() (metrics []handlers.CounterMetric, err error) {
-	getAllSql := `
+	getAllSQL := `
 		SELECT name, delta
 		FROM metric
 		WHERE type = $1
 	`
-	rows, err := d.db.Query(getAllSql, handlers.MetricTypeCounter)
+	rows, err := d.db.Query(getAllSQL, handlers.MetricTypeCounter)
 	if err != nil {
 		return nil, err
 	}
