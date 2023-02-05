@@ -28,7 +28,7 @@ func (d *DBStorage) init() error {
 	}
 
 	_, err = d.db.Exec(`
-		CREATE TABLE metric (id SERIAL, name varchar(255) NOT NULL, type varchar(255) NOT NULL, value DOUBLE PRECISION, delta INT, PRIMARY KEY(id));
+		CREATE TABLE metric (id SERIAL, name varchar(255) NOT NULL, type varchar(255) NOT NULL, value DOUBLE PRECISION, delta BIGINT, PRIMARY KEY(id));
 		CREATE UNIQUE INDEX name_type_unique ON metric (name, type);
 	`)
 
