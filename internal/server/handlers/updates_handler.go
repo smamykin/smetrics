@@ -74,7 +74,7 @@ func (u *UpdatesHandler) upsert(ctx context.Context, metrics []Metrics) (err err
 	}
 
 	var metricsToUpsert []interface{}
-	for _, metric := range countersToUpsert {
+	for _, metric := range gaugeToUpsert {
 		metricsToUpsert = append(metricsToUpsert, metric)
 	}
 	for _, metric := range countersToUpsert {
