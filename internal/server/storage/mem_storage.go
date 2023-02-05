@@ -117,15 +117,13 @@ func (m *MemStorage) UpsertMany(ctx context.Context, metrics []interface{}) erro
 		}
 	}
 	for _, metric := range metrics {
-		switch metric.(type) {
+		switch metric := metric.(type) {
 		case handlers.GaugeMetric:
-			gaugeMetric := metric.(handlers.GaugeMetric)
-			if err := m.UpsertGauge(gaugeMetric); err != nil {
+			if err := m.UpsertGauge(metric); err != nil {
 				return err
 			}
 		case handlers.CounterMetric:
-			counterMetric := metric.(handlers.CounterMetric)
-			if err := m.UpsertCounter(counterMetric); err != nil {
+			if err := m.UpsertCounter(metric); err != nil {
 				return err
 			}
 		}

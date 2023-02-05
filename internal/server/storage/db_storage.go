@@ -205,15 +205,13 @@ func (d *DBStorage) UpsertMany(ctx context.Context, metrics []interface{}) error
 
 	// шаг 3 — указываем, что каждое видео будет добавлено в транзакцию
 	for _, metric := range metrics {
-		switch metric.(type) {
+		switch metric := metric.(type) {
 		case handlers.GaugeMetric:
-			gaugeMetric := metric.(handlers.GaugeMetric)
-			if _, err = stmtGauge.ExecContext(ctx, gaugeMetric.Name, handlers.MetricTypeGauge, gaugeMetric.Value); err != nil {
+			if _, err = stmtGauge.ExecContext(ctx, metric.Name, handlers.MetricTypeGauge, metric.Value); err != nil {
 				return err
 			}
 		case handlers.CounterMetric:
-			counterMetric := metric.(handlers.CounterMetric)
-			if _, err = stmtCounter.ExecContext(ctx, counterMetric.Name, handlers.MetricTypeCounter, counterMetric.Value); err != nil {
+			if _, err = stmtCounter.ExecContext(ctx, metric.Name, handlers.MetricTypeCounter, metric.Value); err != nil {
 				return err
 			}
 		default:
