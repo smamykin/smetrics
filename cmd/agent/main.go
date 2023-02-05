@@ -4,6 +4,7 @@ import (
 	"flag"
 	"fmt"
 	"github.com/caarlos0/env/v6"
+	"github.com/rs/zerolog"
 	"github.com/smamykin/smetrics/internal/agent"
 	"github.com/smamykin/smetrics/internal/utils"
 	"log"
@@ -26,6 +27,8 @@ const (
 	defaultSchema         = "http://"
 	defaultKey            = ""
 )
+
+var logger = zerolog.New(os.Stdout)
 
 func main() {
 	address := flag.String("a", defaultAddress, "The address of the metric server")
@@ -59,7 +62,7 @@ func main() {
 
 	fmt.Printf("Starting the agent. The configuration: %#v", cfg)
 	metricAgent := agent.MetricAgent{
-		Client:   agent.NewClient(cfg.Address, cfg.Key),
+		Client:   agent.NewClient(&logger, cfg.Address, cfg.Key),
 		Provider: &agent.MetricProvider{},
 	}
 

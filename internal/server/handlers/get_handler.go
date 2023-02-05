@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"errors"
 	"net/http"
 )
 
@@ -50,7 +51,7 @@ func (g *GetHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if _, ok := err.(MetricNotFoundError); ok {
+	if errors.Is(err, MetricNotFoundError) {
 		http.Error(w, err.Error(), http.StatusNotFound)
 		return
 	}

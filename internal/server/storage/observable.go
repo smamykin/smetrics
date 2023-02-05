@@ -1,6 +1,8 @@
 package storage
 
-import "log"
+import (
+	"github.com/rs/zerolog"
+)
 
 type Observable interface {
 	AddObserver(o *Observer)
@@ -34,11 +36,11 @@ func (fo *FuncObserver) HandleEvent(e IEvent) error {
 	return fo.FunctionToInvoke(e)
 }
 
-func GetLoggerObserver(logger *log.Logger) Observer {
+func GetLoggerObserver(logger zerolog.Logger) Observer {
 	return &FuncObserver{
 		FunctionToInvoke: func(e IEvent) error {
 			if _, ok := e.(AfterUpsertEvent); ok {
-				logger.Printf("upsert %#v\n", e.Payload())
+				logger.Info().Msgf("upsert %#v\n", e.Payload())
 			}
 			return nil
 		},

@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"context"
+	"errors"
 	"net/http"
 )
 
@@ -47,12 +48,7 @@ type CounterMetric struct {
 	Name  string
 }
 
-type MetricNotFoundError struct {
-}
-
-func (m MetricNotFoundError) Error() string {
-	return "metric not found"
-}
+var MetricNotFoundError = errors.New("metric not found")
 
 type IHashGenerator interface {
 	Generate(stringToHash string) (string, error)

@@ -70,7 +70,7 @@ func TestDBStorage_GetCounter(t *testing.T) {
 
 	_, err = dbStorage.GetCounter("metric-non-existed")
 	require.NotNil(t, err)
-	require.Equal(t, handlers.MetricNotFoundError{}, err)
+	require.Equal(t, handlers.MetricNotFoundError, err)
 }
 
 func TestDBStorage_GetGauge(t *testing.T) {
@@ -90,7 +90,7 @@ func TestDBStorage_GetGauge(t *testing.T) {
 
 	_, err = dbStorage.GetGauge("metric-non-existed")
 	require.NotNil(t, err)
-	require.Equal(t, handlers.MetricNotFoundError{}, err)
+	require.Equal(t, handlers.MetricNotFoundError, err)
 }
 
 func TestDBStorage_UpsertCounter(t *testing.T) {

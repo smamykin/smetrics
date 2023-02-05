@@ -5,18 +5,16 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/rs/zerolog"
 	"github.com/smamykin/smetrics/internal/utils"
-	"log"
 	"net/http"
-	"os"
 	"strconv"
 )
 
-func NewClient(metricAggregatorService string, key string) *Client {
+func NewClient(logger *zerolog.Logger, metricAggregatorService string, key string) *Client {
 	result := &Client{
 		MetricAggregatorService: metricAggregatorService,
-		loggerWarning:           log.New(os.Stdout, "WARNING: ", log.Ldate|log.Ltime),
-		loggerInfo:              log.New(os.Stdout, "INFO:    ", log.Ldate|log.Ltime),
+		logger:                  logger,
 	}
 
 	if key != "" {
@@ -28,8 +26,7 @@ func NewClient(metricAggregatorService string, key string) *Client {
 
 type Client struct {
 	MetricAggregatorService string
-	loggerWarning           *log.Logger
-	loggerInfo              *log.Logger
+	logger                  *zerolog.Logger
 	hashGenerator           IHashGenerator
 }
 
@@ -37,23 +34,23 @@ func (c *Client) SendMetrics(metrics []IMetric) error {
 
 	body, err := c.createRequestBody(metrics)
 	if err != nil {
-		c.loggerWarning.Printf("error while sending the metrics to server. Error: %s\n", err.Error())
+		c.logger.Warn().Msgf("error while sending the metrics to server. Error: %s\n", err.Error())
 		return err
 	}
 	url := fmt.Sprintf("%s/updates/", c.MetricAggregatorService)
 
-	c.loggerInfo.Printf("client are making request. url: %s, body: %s \n", url, string(body))
+	c.logger.Info().Msgf("client are making request. url: %s, body: %s \n", url, string(body))
 
 	post, err := http.Post(url, "application/json", bytes.NewReader(body))
 	if err != nil {
-		c.loggerWarning.Printf("error while sending the metrics to server. Error: %s\n", err.Error())
+		c.logger.Warn().Msgf("error while sending the metrics to server. Error: %s\n", err.Error())
 		return err
 	}
 	defer post.Body.Close()
 
 	if post.StatusCode != http.StatusOK {
 		err = fmt.Errorf("error while sending the metrics to server. Status: %d", post.StatusCode)
-		c.loggerWarning.Println(err.Error())
+		c.logger.Warn().Err(err).Msg("")
 		return err
 	}
 

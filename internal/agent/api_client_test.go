@@ -2,10 +2,10 @@ package agent
 
 import (
 	"fmt"
+	"github.com/rs/zerolog"
 	"github.com/smamykin/smetrics/internal/utils"
 	"github.com/stretchr/testify/require"
 	"io"
-	"log"
 	"math/rand"
 	"net/http"
 	"net/http/httptest"
@@ -46,10 +46,10 @@ func TestClient_SendMetrics(t *testing.T) {
 			server := httptest.NewServer(&handler)
 			defer server.Close()
 
+			logger := zerolog.Nop()
 			client := Client{
 				server.URL,
-				log.New(writerMock{}, "test: ", log.Ldate|log.Ltime),
-				log.New(writerMock{}, "test: ", log.Ldate|log.Ltime),
+				&logger,
 				tt.hash,
 			}
 			client.SendMetrics([]IMetric{

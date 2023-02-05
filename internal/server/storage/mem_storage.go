@@ -77,7 +77,7 @@ func (m *MemStorage) GetAllCounters() ([]handlers.CounterMetric, error) {
 func (m *MemStorage) GetGauge(name string) (float64, error) {
 	metric, ok := m.gaugeStore[name]
 	if !ok {
-		return .0, handlers.MetricNotFoundError{}
+		return .0, handlers.MetricNotFoundError
 	}
 
 	return metric.Value, nil
@@ -86,7 +86,7 @@ func (m *MemStorage) GetGauge(name string) (float64, error) {
 func (m *MemStorage) GetCounter(name string) (int64, error) {
 	metric, ok := m.counterStore[name]
 	if !ok {
-		return 0, handlers.MetricNotFoundError{}
+		return 0, handlers.MetricNotFoundError
 	}
 
 	return metric.Value, nil

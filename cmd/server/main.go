@@ -8,6 +8,7 @@ import (
 	"github.com/caarlos0/env/v6"
 	"github.com/go-chi/chi/v5"
 	_ "github.com/jackc/pgx/v5/stdlib"
+	"github.com/rs/zerolog"
 	"github.com/smamykin/smetrics/internal/server/handlers"
 	"github.com/smamykin/smetrics/internal/server/server"
 	"github.com/smamykin/smetrics/internal/server/storage"
@@ -36,8 +37,7 @@ const (
 	defaultDatabaseDsn   = ""
 )
 
-var loggerInfo = log.New(os.Stdout, "INFO:    ", log.Ldate|log.Ltime)
-var loggerError = log.New(os.Stdout, "ERROR:   ", log.Ldate|log.Ltime)
+var logger = zerolog.New(os.Stdout)
 
 func main() {
 
@@ -85,7 +85,7 @@ func main() {
 		//region database connection setup
 		db, err := sql.Open("pgx", cfg.DatabaseDsn)
 		if err != nil {
-			loggerError.Printf("Cannot connect to db. Error: %s\n", err.Error())
+			logger.Error().Msgf("Cannot connect to db. Error: %s\n", err.Error())
 			return
 		}
 		defer db.Close()
@@ -94,18 +94,18 @@ func main() {
 		//endregion
 		dbStorage, err := storage.NewDBStorage(db)
 		if err != nil {
-			loggerError.Printf("Cannot create dbStorage. Error: %s\n", err.Error())
+			logger.Error().Msgf("Cannot create dbStorage. Error: %s\n", err.Error())
 			return
 		}
-		dbStorage.AddObserver(storage.GetLoggerObserver(loggerInfo))
+		dbStorage.AddObserver(storage.GetLoggerObserver(logger))
 
 		repository = dbStorage
 	} else {
 		memStorage, err := storage.NewMemStorage(cfg.StoreFile, cfg.Restore, cfg.StoreInterval.Seconds() == 0)
 		if err != nil {
-			loggerError.Printf("Cannot create memStorage. Error: %s\n", err.Error())
+			logger.Error().Msgf("Cannot create memStorage. Error: %s\n", err.Error())
 		}
-		memStorage.AddObserver(storage.GetLoggerObserver(loggerInfo))
+		memStorage.AddObserver(storage.GetLoggerObserver(logger))
 
 		if storeInterval.Seconds() != 0 {
 			go utils.InvokeFunctionWithInterval(cfg.StoreInterval, getSaveToFileFunction(memStorage))
@@ -119,7 +119,7 @@ func main() {
 		err = http.ListenAndServe(cfg.Address, server.AddHandlers(r, repository, utils.NewHashGenerator(cfg.Key)))
 	}
 
-	loggerError.Println(err)
+	logger.Error().Err(err).Msg("")
 }
 
 func addProbeEndpoint(r *chi.Mux, db *sql.DB) {
@@ -134,10 +134,10 @@ func addProbeEndpoint(r *chi.Mux, db *sql.DB) {
 
 func getSaveToFileFunction(memStorage *storage.MemStorage) func() {
 	return func() {
-		loggerInfo.Println("Flushing storage to file")
+		logger.Info().Msg("Flushing storage to file")
 		err := memStorage.PersistToFile()
 		if err != nil {
-			loggerError.Println(err)
+			logger.Error().Err(err).Msg("")
 		}
 	}
 }
