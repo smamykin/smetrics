@@ -45,6 +45,12 @@ func (u *UpdatesHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
+
+	err = u.handleBody(w, r.Header.Get("Accept"))
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
 }
 
 func (u *UpdatesHandler) upsert(ctx context.Context, metrics []Metrics) (err error) {
@@ -98,4 +104,14 @@ func (u *UpdatesHandler) getMetricsFromJSON(r *http.Request) (metrics []Metrics,
 	}
 
 	return metrics, nil
+}
+
+func (u *UpdatesHandler) handleBody(w http.ResponseWriter, acceptHeader string) (err error) {
+	if acceptHeader == "application/json" {
+		w.Write([]byte("{}"))
+
+		return nil
+	}
+
+	return nil
 }
