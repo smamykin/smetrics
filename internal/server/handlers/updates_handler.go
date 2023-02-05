@@ -54,15 +54,31 @@ func (u *UpdatesHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 }
 
 func (u *UpdatesHandler) upsert(ctx context.Context, metrics []Metrics) (err error) {
-	var metricsToUpsert []interface{}
+	countersToUpsert := make(map[string]CounterMetric)
+	gaugeToUpsert := make(map[string]GaugeMetric)
 	for _, metric := range metrics {
 		if MetricTypeGauge == metric.MType {
-			metricsToUpsert = append(metricsToUpsert, GaugeMetric{Name: metric.ID, Value: *metric.Value})
+			gaugeToUpsert[metric.ID] = GaugeMetric{Name: metric.ID, Value: *metric.Value}
 		}
 		if MetricTypeCounter == metric.MType {
-			prevValue, _ := u.Repository.GetCounter(metric.ID)
-			metricsToUpsert = append(metricsToUpsert, CounterMetric{Name: metric.ID, Value: prevValue + *metric.Delta})
+			var prevValue int64
+
+			if prevMetric, ok := countersToUpsert[metric.ID]; ok {
+				prevValue = prevMetric.Value
+			} else {
+				prevValue, _ = u.Repository.GetCounter(metric.ID)
+			}
+
+			countersToUpsert[metric.ID] = CounterMetric{Name: metric.ID, Value: prevValue + *metric.Delta}
 		}
+	}
+
+	var metricsToUpsert []interface{}
+	for _, metric := range countersToUpsert {
+		metricsToUpsert = append(metricsToUpsert, metric)
+	}
+	for _, metric := range countersToUpsert {
+		metricsToUpsert = append(metricsToUpsert, metric)
 	}
 
 	return u.Repository.UpsertMany(ctx, metricsToUpsert)
