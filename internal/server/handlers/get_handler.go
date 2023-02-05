@@ -18,7 +18,7 @@ func NewGetHandlerDefault(repository IRepository, parameterBag IParametersBag) *
 	}}
 }
 
-func NewGetHandlerWIthHashGenerator(repository IRepository, parameterBag IParametersBag, hashGenerator IHashGenerator, isSkipCheckOfHashForRequest bool) *GetHandler {
+func NewGetHandlerWithHashGenerator(repository IRepository, parameterBag IParametersBag, hashGenerator IHashGenerator, isSkipCheckOfHashForRequest bool) *GetHandler {
 	return &GetHandler{Handler: &Handler{
 		Repository:                  repository,
 		ParametersBag:               parameterBag,
@@ -51,7 +51,7 @@ func (g *GetHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if errors.Is(err, MetricNotFoundError) {
+	if errors.Is(err, ErrMetricNotFound) {
 		http.Error(w, err.Error(), http.StatusNotFound)
 		return
 	}

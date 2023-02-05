@@ -91,7 +91,7 @@ func (d *DBStorage) GetGauge(name string) (float64, error) {
 	err := row.Scan(&gauge)
 	if err != nil {
 		if err == sql.ErrNoRows {
-			return 0, handlers.MetricNotFoundError
+			return 0, handlers.ErrMetricNotFound
 		}
 		return 0, err
 	}
@@ -113,7 +113,7 @@ func (d *DBStorage) GetCounter(name string) (int64, error) {
 	err := row.Scan(&counter)
 	if err != nil {
 		if err == sql.ErrNoRows {
-			return 0, handlers.MetricNotFoundError
+			return 0, handlers.ErrMetricNotFound
 		}
 		return 0, err
 	}

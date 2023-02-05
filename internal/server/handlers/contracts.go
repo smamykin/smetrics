@@ -48,7 +48,7 @@ type CounterMetric struct {
 	Name  string
 }
 
-var MetricNotFoundError = errors.New("metric not found")
+var ErrMetricNotFound = errors.New("metric not found")
 
 type IHashGenerator interface {
 	Generate(stringToHash string) (string, error)
