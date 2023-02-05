@@ -363,6 +363,21 @@ func TestRouter(t *testing.T) {
 			gaugeStore:   map[string]handlers.GaugeMetric{"metric_name3": {Value: 11.12, Name: "metric_name3"}},
 		},
 	}
+
+	tests["updates"] = testCase{
+		requests: []requestDefinition{
+			{method: http.MethodPost, url: "/updates/", body: `[{"id":"metric_name3", "type":"counter", "delta":11}]`, contentType: "application/json"},
+			{method: http.MethodPost, url: "/updates/", body: `[{"id":"metric_name3", "type":"counter", "delta":13}]`, contentType: "application/json"},
+			{method: http.MethodPost, url: "/value/", body: `{"id":"metric_name3", "type":"counter"}`, contentType: "application/json"},
+		},
+		expected: expected{
+			contentType:  "application/json",
+			statusCode:   http.StatusOK,
+			body:         `{"id":"metric_name3","type":"counter","delta":24}`,
+			counterStore: map[string]handlers.CounterMetric{"metric_name3": {Value: 24, Name: "metric_name3"}},
+			gaugeStore:   map[string]handlers.GaugeMetric{},
+		},
+	}
 	//endregion  testCases
 
 	for name, tt := range tests {

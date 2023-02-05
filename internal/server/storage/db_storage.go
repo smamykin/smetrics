@@ -1,7 +1,9 @@
 package storage
 
 import (
+	"context"
 	"database/sql"
+	"errors"
 	"github.com/smamykin/smetrics/internal/server/handlers"
 )
 
@@ -39,14 +41,21 @@ func (d *DBStorage) init() error {
 	return nil
 }
 
+var upsertCounterSQL = `
+	INSERT INTO metric (name, type, delta) 
+	VALUES ($1, $2, $3)
+	ON CONFLICT (name, type) DO UPDATE 
+		SET delta = EXCLUDED.delta
+`
+var upsertGaugeSQL = `
+	INSERT INTO metric (name, type, value) 
+	VALUES ($1, $2, $3)
+	ON CONFLICT (name, type) DO UPDATE 
+		SET value = EXCLUDED.value
+`
+
 func (d *DBStorage) UpsertGauge(metric handlers.GaugeMetric) error {
-	upsertSQL := `
-		INSERT INTO metric (name, type, value) 
-		VALUES ($1, $2, $3)
-		ON CONFLICT (name, type) DO UPDATE 
-		    SET value = EXCLUDED.value
-	`
-	_, err := d.db.Exec(upsertSQL, metric.Name, handlers.MetricTypeGauge, metric.Value)
+	_, err := d.db.Exec(upsertGaugeSQL, metric.Name, handlers.MetricTypeGauge, metric.Value)
 
 	if err != nil {
 		return err
@@ -58,13 +67,7 @@ func (d *DBStorage) UpsertGauge(metric handlers.GaugeMetric) error {
 }
 
 func (d *DBStorage) UpsertCounter(metric handlers.CounterMetric) error {
-	upsertSQL := `
-		INSERT INTO metric (name, type, delta) 
-		VALUES ($1, $2, $3)
-		ON CONFLICT (name, type) DO UPDATE 
-		    SET delta = EXCLUDED.delta
-	`
-	_, err := d.db.Exec(upsertSQL, metric.Name, handlers.MetricTypeCounter, metric.Value)
+	_, err := d.db.Exec(upsertCounterSQL, metric.Name, handlers.MetricTypeCounter, metric.Value)
 	if err != nil {
 		return err
 	}
@@ -176,6 +179,50 @@ func (d *DBStorage) GetAllCounters() (metrics []handlers.CounterMetric, err erro
 	}
 
 	return metrics, err
+}
+
+func (d *DBStorage) UpsertMany(ctx context.Context, metrics []interface{}) error {
+
+	// шаг 1 — объявляем транзакцию
+	tx, err := d.db.Begin()
+	if err != nil {
+		return err
+	}
+	// шаг 1.1 — если возникает ошибка, откатываем изменения
+	defer tx.Rollback()
+
+	// шаг 2 — готовим инструкцию
+	stmtGauge, err := tx.PrepareContext(ctx, upsertGaugeSQL)
+	if err != nil {
+		return err
+	}
+	defer stmtGauge.Close()
+	stmtCounter, err := tx.PrepareContext(ctx, upsertCounterSQL)
+	if err != nil {
+		return err
+	}
+	defer stmtCounter.Close()
+
+	// шаг 3 — указываем, что каждое видео будет добавлено в транзакцию
+	for _, metric := range metrics {
+		switch metric.(type) {
+		case handlers.GaugeMetric:
+			gaugeMetric := metric.(handlers.GaugeMetric)
+			if _, err = stmtGauge.ExecContext(ctx, gaugeMetric.Name, handlers.MetricTypeGauge, gaugeMetric.Value); err != nil {
+				return err
+			}
+		case handlers.CounterMetric:
+			counterMetric := metric.(handlers.CounterMetric)
+			if _, err = stmtCounter.ExecContext(ctx, counterMetric.Name, handlers.MetricTypeCounter, counterMetric.Value); err != nil {
+				return err
+			}
+		default:
+			return errors.New("unknown metric type")
+		}
+	}
+
+	// шаг 4 — сохраняем изменения
+	return tx.Commit()
 }
 
 func (d *DBStorage) AddObserver(o Observer) {

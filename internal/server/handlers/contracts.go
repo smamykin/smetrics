@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"context"
 	"net/http"
 )
 
@@ -18,6 +19,7 @@ const (
 type IRepository interface {
 	UpsertGauge(GaugeMetric) error
 	UpsertCounter(CounterMetric) error
+	UpsertMany(context.Context, []interface{}) error
 	GetGauge(name string) (float64, error)
 	GetCounter(name string) (int64, error)
 	GetAllGauge() ([]GaugeMetric, error)

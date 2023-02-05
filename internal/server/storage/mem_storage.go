@@ -1,6 +1,8 @@
 package storage
 
 import (
+	"context"
+	"errors"
 	"fmt"
 	"github.com/smamykin/smetrics/internal/server/handlers"
 )
@@ -104,6 +106,32 @@ func (m *MemStorage) UpsertCounter(metric handlers.CounterMetric) error {
 	return m.notifyObservers(AfterUpsertEvent{
 		Event{metric},
 	})
+}
+
+func (m *MemStorage) UpsertMany(ctx context.Context, metrics []interface{}) error {
+	for _, metric := range metrics {
+		_, isCounterMetric := metric.(handlers.CounterMetric)
+		_, isGaugeMetric := metric.(handlers.GaugeMetric)
+		if !isCounterMetric && !isGaugeMetric {
+			return errors.New("unknown metric type")
+		}
+	}
+	for _, metric := range metrics {
+		switch metric.(type) {
+		case handlers.GaugeMetric:
+			gaugeMetric := metric.(handlers.GaugeMetric)
+			if err := m.UpsertGauge(gaugeMetric); err != nil {
+				return err
+			}
+		case handlers.CounterMetric:
+			counterMetric := metric.(handlers.CounterMetric)
+			if err := m.UpsertCounter(counterMetric); err != nil {
+				return err
+			}
+		}
+	}
+
+	return nil
 }
 
 func (m *MemStorage) notifyObservers(event IEvent) error {

@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -233,5 +234,8 @@ func (r RepositoryMock) GetAllGauge() ([]GaugeMetric, error) {
 	panic("must not be invoked")
 }
 func (r RepositoryMock) GetAllCounters() ([]CounterMetric, error) {
+	panic("must not be invoked")
+}
+func (r RepositoryMock) UpsertMany(ctx context.Context, metrics []interface{}) error {
 	panic("must not be invoked")
 }

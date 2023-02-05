@@ -23,6 +23,7 @@ func AddHandlers(r *chi.Mux, repository handlers.IRepository, hashGenerator hand
 	//region JSON-API
 	r.Method("POST", "/update/", handlers.NewUpdateHandlerWithHashGenerator(repository, ParameterBag{}, hashGenerator, hashGenerator == nil))
 	r.Method("POST", "/value/", handlers.NewGetHandlerWIthHashGenerator(repository, ParameterBag{}, hashGenerator, true))
+	r.Method("POST", "/updates/", handlers.NewUpdatesHandlerWithHashGenerator(repository, ParameterBag{}, hashGenerator, hashGenerator == nil))
 	//endregion
 
 	return gzipHandle(r)

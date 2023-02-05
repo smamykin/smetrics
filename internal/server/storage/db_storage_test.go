@@ -2,6 +2,7 @@
 package storage
 
 import (
+	"context"
 	"database/sql"
 	_ "github.com/jackc/pgx/v5/stdlib"
 	"github.com/smamykin/smetrics/internal/server/handlers"
@@ -152,6 +153,45 @@ func TestDBStorage_UpsertGauge(t *testing.T) {
 	require.Nil(t, err)
 	require.Equal(t, metric.Value, actual)
 
+}
+func TestDBStorage_UpsertMany(t *testing.T) {
+	skipIfNoDatabaseURL(t)
+
+	db, err := sql.Open("pgx", os.Getenv("DATABASE_URL"))
+	require.Nil(t, err)
+	defer db.Close()
+
+	dbStorage, err := NewDBStorage(db)
+	require.Nil(t, err)
+	prepareDBBeforeTest(db, t)
+
+	//insert
+	metricGauge := handlers.GaugeMetric{Name: "metric-z", Value: 222.333}
+	metricCounter := handlers.CounterMetric{Name: "metric-y", Value: 222}
+	metrics := []interface{}{metricGauge, metricCounter}
+	err = dbStorage.UpsertMany(context.Background(), metrics)
+	require.Nil(t, err)
+
+	actualGauge, err := dbStorage.GetGauge("metric-z")
+	require.Nil(t, err)
+	require.Equal(t, metricGauge.Value, actualGauge)
+	actualCounter, err := dbStorage.GetCounter("metric-y")
+	require.Nil(t, err)
+	require.Equal(t, metricCounter.Value, actualCounter)
+
+	//update
+	metricGauge = handlers.GaugeMetric{Name: "metric-z", Value: 444.555}
+	metricCounter = handlers.CounterMetric{Name: "metric-y", Value: 333}
+	metrics = []interface{}{metricGauge, metricCounter}
+	err = dbStorage.UpsertMany(context.Background(), metrics)
+	require.Nil(t, err)
+
+	actualGauge, err = dbStorage.GetGauge("metric-z")
+	require.Nil(t, err)
+	require.Equal(t, metricGauge.Value, actualGauge)
+	actualCounter, err = dbStorage.GetCounter("metric-y")
+	require.Nil(t, err)
+	require.Equal(t, metricCounter.Value, actualCounter)
 }
 
 func TestDBStorage_init(t *testing.T) {
