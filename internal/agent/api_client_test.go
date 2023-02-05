@@ -9,7 +9,6 @@ import (
 	"math/rand"
 	"net/http"
 	"net/http/httptest"
-	"strconv"
 	"testing"
 )
 
@@ -27,11 +26,11 @@ func TestClient_SendMetrics(t *testing.T) {
 	tests := map[string]testCase{
 		"default": {
 			nil,
-			fmt.Sprintf(`{"id":"metricNameTest","type":"counter","delta":%d}`, value),
+			fmt.Sprintf(`[{"id":"metricNameTest","type":"counter","delta":%d}]`, value),
 		},
 		"with key": {
 			h,
-			fmt.Sprintf(`{"id":"metricNameTest","type":"counter","delta":%d,"hash":"%s"}`, value, sign),
+			fmt.Sprintf(`[{"id":"metricNameTest","type":"counter","delta":%d,"hash":"%s"}]`, value, sign),
 		},
 	}
 
@@ -39,7 +38,7 @@ func TestClient_SendMetrics(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			handler := handlerForTest{
 				expectedMethod:      "POST",
-				expectedPath:        "/update/",
+				expectedPath:        "/updates/",
 				expectedContentType: "application/json",
 				expectedBody:        tt.expectedBody,
 				t:                   t,
@@ -53,7 +52,9 @@ func TestClient_SendMetrics(t *testing.T) {
 				log.New(writerMock{}, "test: ", log.Ldate|log.Ltime),
 				tt.hash,
 			}
-			client.SendMetrics("counter", "metricNameTest", strconv.Itoa(value))
+			client.SendMetrics([]IMetric{
+				MetricCounter{value, "metricNameTest"},
+			})
 
 			require.True(t, handler.isInvoked)
 		})

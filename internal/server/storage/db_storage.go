@@ -222,7 +222,14 @@ func (d *DBStorage) UpsertMany(ctx context.Context, metrics []interface{}) error
 	}
 
 	// шаг 4 — сохраняем изменения
-	return tx.Commit()
+	err = tx.Commit()
+	if err != nil {
+		return err
+	}
+
+	return d.notifyObservers(AfterUpsertEvent{
+		Event{metrics},
+	})
 }
 
 func (d *DBStorage) AddObserver(o Observer) {

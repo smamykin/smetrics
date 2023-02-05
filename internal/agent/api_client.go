@@ -33,14 +33,14 @@ type Client struct {
 	hashGenerator           IHashGenerator
 }
 
-func (c *Client) SendMetrics(metricType, metricName, metricValue string) error {
+func (c *Client) SendMetrics(metrics []IMetric) error {
 
-	body, err := c.createRequestBody(metricType, metricName, metricValue)
+	body, err := c.createRequestBody(metrics)
 	if err != nil {
 		c.loggerWarning.Printf("error while sending the metrics to server. Error: %s\n", err.Error())
 		return err
 	}
-	url := fmt.Sprintf("%s/update/", c.MetricAggregatorService)
+	url := fmt.Sprintf("%s/updates/", c.MetricAggregatorService)
 
 	c.loggerInfo.Printf("client are making request. url: %s, body: %s \n", url, string(body))
 
@@ -60,38 +60,42 @@ func (c *Client) SendMetrics(metricType, metricName, metricValue string) error {
 	return nil
 }
 
-func (c *Client) createRequestBody(metricType, metricName, metricValue string) (body []byte, err error) {
-	metrics := Metrics{
-		MType: metricType,
-		ID:    metricName,
-	}
-	switch metrics.MType {
-	case MetricTypeGauge:
-		value, err := strconv.ParseFloat(metricValue, 64)
-		if err != nil {
-			return body, fmt.Errorf("unable to parse gauge value: %w", err)
+func (c *Client) createRequestBody(metrics []IMetric) (body []byte, err error) {
+	var result []Metrics
+	for _, metric := range metrics {
+		m := Metrics{
+			MType: metric.GetType(),
+			ID:    metric.GetName(),
 		}
-		metrics.Value = &value
-		err = c.signMetricWithHash(&metrics)
-		if err != nil {
-			return body, err
-		}
-	case MetricTypeCounter:
-		value, err := strconv.ParseInt(metricValue, 10, 64)
-		if err != nil {
-			return body, fmt.Errorf("unable to parse counter value: %w", err)
-		}
-		metrics.Delta = &value
+		switch m.MType {
+		case MetricTypeGauge:
+			value, err := strconv.ParseFloat(metric.String(), 64)
+			if err != nil {
+				return body, fmt.Errorf("unable to parse gauge value: %w", err)
+			}
+			m.Value = &value
+			err = c.signMetricWithHash(&m)
+			if err != nil {
+				return body, err
+			}
+		case MetricTypeCounter:
+			value, err := strconv.ParseInt(metric.String(), 10, 64)
+			if err != nil {
+				return body, fmt.Errorf("unable to parse counter value: %w", err)
+			}
+			m.Delta = &value
 
-		err = c.signMetricWithHash(&metrics)
-		if err != nil {
-			return body, err
+			err = c.signMetricWithHash(&m)
+			if err != nil {
+				return body, err
+			}
+		default:
+			return body, errors.New("unknown type of the metric")
 		}
-	default:
-		return body, errors.New("unknown type of the metric")
-	}
 
-	return json.Marshal(metrics)
+		result = append(result, m)
+	}
+	return json.Marshal(result)
 }
 
 func (c *Client) signMetricWithHash(metrics *Metrics) (err error) {
