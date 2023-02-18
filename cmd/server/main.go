@@ -1,9 +1,14 @@
 package main
 
 import (
+	"database/sql"
 	"flag"
 	"fmt"
 	"github.com/caarlos0/env/v6"
+	"github.com/go-chi/chi/v5"
+	_ "github.com/jackc/pgx/v5/stdlib"
+	"github.com/rs/zerolog"
+	"github.com/smamykin/smetrics/internal/server/handlers"
 	"github.com/smamykin/smetrics/internal/server/server"
 	"github.com/smamykin/smetrics/internal/server/storage"
 	"github.com/smamykin/smetrics/internal/utils"
@@ -18,6 +23,8 @@ type Config struct {
 	Restore       bool          `env:"RESTORE"`
 	StoreFile     string        `env:"STORE_FILE"`
 	StoreInterval time.Duration `env:"STORE_INTERVAL"`
+	Key           string        `env:"KEY"`
+	DatabaseDsn   string        `env:"DATABASE_DSN"`
 }
 
 const (
@@ -25,16 +32,20 @@ const (
 	defaultRestore       = true
 	defaultStoreFile     = "/tmp/devops-metrics-db.json"
 	defaultStoreInterval = time.Second * 300
+	defaultKey           = ""
+	defaultDatabaseDsn   = ""
 )
 
-var loggerInfo = log.New(os.Stdout, "INFO:    ", log.Ldate|log.Ltime)
-var loggerError = log.New(os.Stdout, "ERROR:   ", log.Ldate|log.Ltime)
+var logger = zerolog.New(os.Stdout)
 
 func main() {
+
 	address := flag.String("a", defaultAddress, "The address of the server")
 	restore := flag.Bool("r", defaultRestore, "To restore the dump from the file")
 	storeFile := flag.String("f", defaultStoreFile, "the absolute path to the dump file.")
 	storeInterval := flag.Duration("i", defaultStoreInterval, "How often to save the dump of the metrics")
+	key := flag.String("k", defaultKey, "The secret key")
+	databaseDsn := flag.String("d", defaultDatabaseDsn, "The database url")
 	flag.Parse()
 
 	var cfg Config
@@ -55,30 +66,77 @@ func main() {
 	if _, isPresent := os.LookupEnv("STORE_INTERVAL"); !isPresent {
 		cfg.StoreInterval = *storeInterval
 	}
+	if _, isPresent := os.LookupEnv("KEY"); !isPresent {
+		cfg.Key = *key
+	}
+	if _, isPresent := os.LookupEnv("DATABASE_DSN"); !isPresent {
+		cfg.DatabaseDsn = *databaseDsn
+	}
 
 	fmt.Printf("Starting the server. The configuration: %#v\n", cfg)
 
+	r := chi.NewRouter()
+
+	var repository handlers.IRepository
+	if cfg.DatabaseDsn != "" {
+		repository, err = createDBStorage(cfg)
+		if err != nil {
+			logger.Error().Msgf("Cannot connect to db. Error: %s\n", err.Error())
+			return
+		}
+	} else {
+		repository, err = createMemStorage(cfg)
+		if err != nil {
+			logger.Error().Msgf("Cannot create memStorage. Error: %s\n", err.Error())
+			return
+		}
+	}
+
+	if cfg.Key == "" {
+		err = http.ListenAndServe(cfg.Address, server.AddHandlers(r, repository, nil))
+	} else {
+		err = http.ListenAndServe(cfg.Address, server.AddHandlers(r, repository, utils.NewHashGenerator(cfg.Key)))
+	}
+
+	logger.Error().Err(err).Msg("")
+}
+
+func createMemStorage(cfg Config) (handlers.IRepository, error) {
 	memStorage, err := storage.NewMemStorage(cfg.StoreFile, cfg.Restore, cfg.StoreInterval.Seconds() == 0)
 	if err != nil {
-		loggerError.Printf("Cannot create memStorage. Error: %s\n", err.Error())
+		return nil, err
 	}
-	memStorage.AddObserver(storage.GetLoggerObserver(loggerInfo))
+	memStorage.AddObserver(storage.GetLoggerObserver(logger))
 
-	if storeInterval.Seconds() != 0 {
+	if cfg.StoreInterval.Seconds() != 0 {
 		go utils.InvokeFunctionWithInterval(cfg.StoreInterval, getSaveToFileFunction(memStorage))
 	}
 
-	err = http.ListenAndServe(cfg.Address, server.NewRouter(memStorage))
+	return memStorage, nil
+}
 
-	loggerError.Println(err)
+func createDBStorage(cfg Config) (*storage.DBStorage, error) {
+	db, err := sql.Open("pgx", cfg.DatabaseDsn)
+	if err != nil {
+		return nil, err
+	}
+	defer db.Close()
+
+	dbStorage, err := storage.NewDBStorage(db)
+	if err != nil {
+		return nil, err
+	}
+	dbStorage.AddObserver(storage.GetLoggerObserver(logger))
+
+	return dbStorage, nil
 }
 
 func getSaveToFileFunction(memStorage *storage.MemStorage) func() {
 	return func() {
-		loggerInfo.Println("Flushing storage to file")
+		logger.Info().Msg("Flushing storage to file")
 		err := memStorage.PersistToFile()
 		if err != nil {
-			loggerError.Println(err)
+			logger.Error().Err(err).Msg("")
 		}
 	}
 }

@@ -48,7 +48,7 @@ func TestMetricAgent_SendMetrics(t *testing.T) {
 
 	ma.SendMetrics()
 	require.Empty(t, ma.container)
-	require.Equal(t, 4, clientMock.invokedTimes)
+	require.Equal(t, 1, clientMock.invokedTimes)
 }
 
 type apiClientMock struct {
@@ -57,12 +57,8 @@ type apiClientMock struct {
 	t            *testing.T
 }
 
-func (a *apiClientMock) SendMetrics(metricType string, metricName string, metricValue string) error {
-	assert.Equal(a.t, a.expectedArgs[a.invokedTimes], metricMock{
-		metricValue,
-		metricType,
-		metricName,
-	})
+func (a *apiClientMock) SendMetrics(metrics []IMetric) error {
+	assert.Equal(a.t, a.expectedArgs, metrics)
 	a.invokedTimes++
 	return nil
 }

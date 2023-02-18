@@ -1,6 +1,8 @@
 package storage
 
 import (
+	"context"
+	"errors"
 	"fmt"
 	"github.com/smamykin/smetrics/internal/server/handlers"
 )
@@ -75,7 +77,7 @@ func (m *MemStorage) GetAllCounters() ([]handlers.CounterMetric, error) {
 func (m *MemStorage) GetGauge(name string) (float64, error) {
 	metric, ok := m.gaugeStore[name]
 	if !ok {
-		return .0, handlers.MetricNotFoundError{}
+		return .0, handlers.ErrMetricNotFound
 	}
 
 	return metric.Value, nil
@@ -84,7 +86,7 @@ func (m *MemStorage) GetGauge(name string) (float64, error) {
 func (m *MemStorage) GetCounter(name string) (int64, error) {
 	metric, ok := m.counterStore[name]
 	if !ok {
-		return 0, handlers.MetricNotFoundError{}
+		return 0, handlers.ErrMetricNotFound
 	}
 
 	return metric.Value, nil
@@ -104,6 +106,30 @@ func (m *MemStorage) UpsertCounter(metric handlers.CounterMetric) error {
 	return m.notifyObservers(AfterUpsertEvent{
 		Event{metric},
 	})
+}
+
+func (m *MemStorage) UpsertMany(ctx context.Context, metrics []interface{}) error {
+	for _, metric := range metrics {
+		_, isCounterMetric := metric.(handlers.CounterMetric)
+		_, isGaugeMetric := metric.(handlers.GaugeMetric)
+		if !isCounterMetric && !isGaugeMetric {
+			return errors.New("unknown metric type")
+		}
+	}
+	for _, metric := range metrics {
+		switch metric := metric.(type) {
+		case handlers.GaugeMetric:
+			if err := m.UpsertGauge(metric); err != nil {
+				return err
+			}
+		case handlers.CounterMetric:
+			if err := m.UpsertCounter(metric); err != nil {
+				return err
+			}
+		}
+	}
+
+	return nil
 }
 
 func (m *MemStorage) notifyObservers(event IEvent) error {

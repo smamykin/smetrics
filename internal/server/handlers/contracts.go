@@ -1,6 +1,8 @@
 package handlers
 
 import (
+	"context"
+	"errors"
 	"net/http"
 )
 
@@ -18,20 +20,27 @@ const (
 type IRepository interface {
 	UpsertGauge(GaugeMetric) error
 	UpsertCounter(CounterMetric) error
+	UpsertMany(context.Context, []interface{}) error
 	GetGauge(name string) (float64, error)
 	GetCounter(name string) (int64, error)
 	GetAllGauge() ([]GaugeMetric, error)
 	GetAllCounters() ([]CounterMetric, error)
 }
+
+type IRepositoryWithHealthCheck interface {
+	Healthcheck(context.Context) error
+}
+
 type IParametersBag interface {
 	GetURLParam(r *http.Request, key string) string
 }
 
 type Metrics struct {
-	ID    string   `json:"id"`                             // имя метрики
-	MType string   `json:"type" valid:"in(gauge|counter)"` // параметр, принимающий значение gauge или counter
-	Delta *int64   `json:"delta,omitempty"`                // значение метрики в случае передачи counter
-	Value *float64 `json:"value,omitempty"`                // значение метрики в случае передачи gauge
+	ID    string   `json:"id" valid:"required"`                     // имя метрики
+	MType string   `json:"type" valid:"in(gauge|counter),required"` // параметр, принимающий значение gauge или counter
+	Delta *int64   `json:"delta,omitempty"`                         // значение метрики в случае передачи counter
+	Value *float64 `json:"value,omitempty"`                         // значение метрики в случае передачи gauge
+	Hash  string   `json:"hash,omitempty"`                          // значение хеш-функции
 }
 
 type GaugeMetric struct {
@@ -44,9 +53,9 @@ type CounterMetric struct {
 	Name  string
 }
 
-type MetricNotFoundError struct {
-}
+var ErrMetricNotFound = errors.New("metric not found")
 
-func (m MetricNotFoundError) Error() string {
-	return "metric not found"
+type IHashGenerator interface {
+	Generate(stringToHash string) (string, error)
+	Equal(string, string) bool
 }

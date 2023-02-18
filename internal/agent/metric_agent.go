@@ -9,7 +9,7 @@ type IMetric interface {
 }
 
 type IClient interface {
-	SendMetrics(metricType, metricName, metricValue string) error
+	SendMetrics(metrics []IMetric) error
 }
 
 type IMetricProvider interface {
@@ -31,9 +31,7 @@ func (mc *MetricAgent) GatherMetrics() {
 func (mc *MetricAgent) SendMetrics() {
 	defer mc.reset()
 
-	for _, metric := range mc.container {
-		mc.Client.SendMetrics(metric.GetType(), metric.GetName(), metric.String())
-	}
+	mc.Client.SendMetrics(mc.container)
 }
 
 func (mc *MetricAgent) reset() *MetricAgent {

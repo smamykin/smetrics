@@ -3,8 +3,11 @@ package server
 import (
 	"bytes"
 	"compress/gzip"
+	"fmt"
+	"github.com/go-chi/chi/v5"
 	"github.com/smamykin/smetrics/internal/server/handlers"
 	"github.com/smamykin/smetrics/internal/server/storage"
+	"github.com/smamykin/smetrics/internal/utils"
 	"github.com/stretchr/testify/require"
 	"io"
 	"net/http"
@@ -63,8 +66,10 @@ func TestRouter(t *testing.T) {
 		name     string
 		requests []requestDefinition
 		expected
+		hashGenerator *utils.HashGenerator
 	}
 
+	//region testcase
 	tests := map[string]testCase{
 		"the first update of the counter": {
 			requests: []requestDefinition{{method: http.MethodPost, url: "/update/counter/metric_name/43"}},
@@ -270,10 +275,120 @@ func TestRouter(t *testing.T) {
 		},
 	}
 
+	h := utils.NewHashGenerator("secret key")
+	sign, err := h.Generate(fmt.Sprintf("metric_name3:counter:%d", 11))
+	require.Nil(t, err)
+	body := fmt.Sprintf(`{"id":"metric_name3","type":"counter","delta":11,"hash":"%s"}`, sign)
+	tests["update counter with a sign - success"] = testCase{
+		requests: []requestDefinition{
+			{
+				method:      http.MethodPost,
+				url:         "/update/",
+				body:        body,
+				contentType: "application/json"},
+		},
+		hashGenerator: h,
+		expected: expected{
+			contentType:  "application/json",
+			statusCode:   http.StatusOK,
+			body:         body,
+			counterStore: map[string]handlers.CounterMetric{"metric_name3": {Value: 11, Name: "metric_name3"}},
+			gaugeStore:   map[string]handlers.GaugeMetric{},
+		},
+	}
+	tests["get counter with a sign - success"] = testCase{
+		requests: []requestDefinition{
+			{
+				method:      http.MethodPost,
+				url:         "/update/",
+				body:        body,
+				contentType: "application/json",
+			},
+			{
+				method:      http.MethodPost,
+				url:         "/value/",
+				body:        `{"id":"metric_name3","type":"counter"}`,
+				contentType: "application/json"},
+		},
+		hashGenerator: h,
+		expected: expected{
+			contentType:  "application/json",
+			statusCode:   http.StatusOK,
+			body:         body,
+			counterStore: map[string]handlers.CounterMetric{"metric_name3": {Value: 11, Name: "metric_name3"}},
+			gaugeStore:   map[string]handlers.GaugeMetric{},
+		},
+	}
+	sign, err = h.Generate(fmt.Sprintf("metric_name3:gauge:%f", 11.12))
+	require.Nil(t, err)
+	body = fmt.Sprintf(`{"id":"metric_name3","type":"gauge","value":11.12,"hash":"%s"}`, sign)
+	tests["update gauge with a sign - success"] = testCase{
+		requests: []requestDefinition{
+			{
+				method:      http.MethodPost,
+				url:         "/update/",
+				body:        body,
+				contentType: "application/json",
+			},
+		},
+		hashGenerator: h,
+		expected: expected{
+			contentType:  "application/json",
+			statusCode:   http.StatusOK,
+			body:         body,
+			counterStore: map[string]handlers.CounterMetric{},
+			gaugeStore:   map[string]handlers.GaugeMetric{"metric_name3": {Value: 11.12, Name: "metric_name3"}},
+		},
+	}
+	tests["get gauge with a sign - success"] = testCase{
+		requests: []requestDefinition{
+			{
+				method:      http.MethodPost,
+				url:         "/update/",
+				body:        body,
+				contentType: "application/json",
+			},
+			{
+				method:      http.MethodPost,
+				url:         "/value/",
+				body:        `{"id":"metric_name3","type":"gauge"}`,
+				contentType: "application/json"},
+		},
+		hashGenerator: h,
+		expected: expected{
+			contentType:  "application/json",
+			statusCode:   http.StatusOK,
+			body:         body,
+			counterStore: map[string]handlers.CounterMetric{},
+			gaugeStore:   map[string]handlers.GaugeMetric{"metric_name3": {Value: 11.12, Name: "metric_name3"}},
+		},
+	}
+
+	tests["updates"] = testCase{
+		requests: []requestDefinition{
+			{method: http.MethodPost, url: "/updates/", body: `[{"id":"metric_name3", "type":"counter", "delta":11}]`, contentType: "application/json"},
+			{method: http.MethodPost, url: "/updates/", body: `[{"id":"metric_name3", "type":"counter", "delta":13}]`, contentType: "application/json"},
+			{method: http.MethodPost, url: "/value/", body: `{"id":"metric_name3", "type":"counter"}`, contentType: "application/json"},
+		},
+		expected: expected{
+			contentType:  "application/json",
+			statusCode:   http.StatusOK,
+			body:         `{"id":"metric_name3","type":"counter","delta":24}`,
+			counterStore: map[string]handlers.CounterMetric{"metric_name3": {Value: 24, Name: "metric_name3"}},
+			gaugeStore:   map[string]handlers.GaugeMetric{},
+		},
+	}
+	//endregion  testCases
+
 	for name, tt := range tests {
 		t.Run(name, func(t *testing.T) {
 			repository := storage.NewMemStorageDefault()
-			r := NewRouter(repository)
+			var r http.Handler
+			if tt.hashGenerator == nil {
+				r = AddHandlers(chi.NewRouter(), repository, nil)
+			} else {
+				r = AddHandlers(chi.NewRouter(), repository, tt.hashGenerator)
+			}
 			ts := httptest.NewServer(r)
 			defer ts.Close()
 

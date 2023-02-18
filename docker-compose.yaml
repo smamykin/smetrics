@@ -1,0 +1,15 @@
+version: '3.5'
+services:
+  postgres:
+    image: postgres:15-alpine3.17
+    ports:
+      - "54323:5432"
+    environment:
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_USER: postgres
+      PGDATA: /postgresql/data
+    volumes:
+      - pgdata:/postgresql/data:rw
+volumes:
+  pgdata:
+    driver: local

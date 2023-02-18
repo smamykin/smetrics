@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"errors"
 	"net/http"
 )
 
@@ -8,10 +9,21 @@ type GetHandler struct {
 	*Handler
 }
 
-func NewGetHandler(repository IRepository, parameterBag IParametersBag) *GetHandler {
-	return &GetHandler{&Handler{
-		repository,
-		parameterBag,
+func NewGetHandlerDefault(repository IRepository, parameterBag IParametersBag) *GetHandler {
+	return &GetHandler{Handler: &Handler{
+		Repository:                  repository,
+		ParametersBag:               parameterBag,
+		HashGenerator:               nil,
+		IsSkipCheckOfHashForRequest: true,
+	}}
+}
+
+func NewGetHandlerWithHashGenerator(repository IRepository, parameterBag IParametersBag, hashGenerator IHashGenerator, isSkipCheckOfHashForRequest bool) *GetHandler {
+	return &GetHandler{Handler: &Handler{
+		Repository:                  repository,
+		ParametersBag:               parameterBag,
+		HashGenerator:               hashGenerator,
+		IsSkipCheckOfHashForRequest: isSkipCheckOfHashForRequest,
 	}}
 }
 
@@ -39,7 +51,7 @@ func (g *GetHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if _, ok := err.(MetricNotFoundError); ok {
+	if errors.Is(err, ErrMetricNotFound) {
 		http.Error(w, err.Error(), http.StatusNotFound)
 		return
 	}

@@ -11,8 +11,10 @@ import (
 )
 
 type Handler struct {
-	Repository    IRepository
-	ParametersBag IParametersBag
+	Repository                  IRepository
+	ParametersBag               IParametersBag
+	HashGenerator               IHashGenerator
+	IsSkipCheckOfHashForRequest bool
 }
 
 func (h *Handler) handleHeaders(w http.ResponseWriter, r *http.Request) {
@@ -36,7 +38,7 @@ func (h *Handler) getMetricFromRequest(r *http.Request) (metric Metrics, err err
 		return metric, err
 	}
 
-	_, err = valid.ValidateStruct(&metric)
+	_, err = h.validateMetric(&metric)
 
 	if err != nil {
 		return metric, err
@@ -88,31 +90,17 @@ func (h *Handler) getMetricFromURL(r *http.Request) (metric Metrics, err error) 
 }
 
 func (h *Handler) handleBody(w http.ResponseWriter, metric Metrics, acceptHeader string) (err error) {
-	var actualMetric Metrics
+	actualMetric, err := h.getActualMetric(metric)
+	if err != nil {
+		return err
+	}
 
-	switch metric.MType {
-	case MetricTypeCounter:
-		v, err := h.Repository.GetCounter(metric.ID)
+	if h.HashGenerator != nil {
+		sign, err := h.getSign(actualMetric)
 		if err != nil {
 			return err
 		}
-		actualMetric = Metrics{
-			ID:    metric.ID,
-			MType: MetricTypeCounter,
-			Delta: &v,
-		}
-	case MetricTypeGauge:
-		v, err := h.Repository.GetGauge(metric.ID)
-		if err != nil {
-			return err
-		}
-		actualMetric = Metrics{
-			ID:    metric.ID,
-			MType: MetricTypeGauge,
-			Value: &v,
-		}
-	default:
-		return errors.New("trying to get metric with unknown type, there is an error in logic of checking request")
+		actualMetric.Hash = sign
 	}
 
 	if acceptHeader == "application/json" {
@@ -133,4 +121,68 @@ func (h *Handler) handleBody(w http.ResponseWriter, metric Metrics, acceptHeader
 	}
 
 	return nil
+}
+
+func (h *Handler) getActualMetric(metric Metrics) (Metrics, error) {
+	var actualMetric Metrics
+
+	switch metric.MType {
+	case MetricTypeCounter:
+		v, err := h.Repository.GetCounter(metric.ID)
+		if err != nil {
+			return Metrics{}, err
+		}
+		actualMetric = Metrics{
+			ID:    metric.ID,
+			MType: MetricTypeCounter,
+			Delta: &v,
+		}
+	case MetricTypeGauge:
+		v, err := h.Repository.GetGauge(metric.ID)
+		if err != nil {
+			return Metrics{}, err
+		}
+		actualMetric = Metrics{
+			ID:    metric.ID,
+			MType: MetricTypeGauge,
+			Value: &v,
+		}
+	default:
+		return Metrics{}, errors.New("trying to get metric with unknown type, there is an error in logic of checking request")
+	}
+
+	return actualMetric, nil
+}
+
+func (h *Handler) validateMetric(metric *Metrics) (bool, error) {
+	if h.IsSkipCheckOfHashForRequest {
+		return valid.ValidateStruct(metric)
+	}
+
+	if metric.Hash == "" {
+		return false, fmt.Errorf("hash is not correct")
+	}
+
+	sign, err := h.getSign(*metric)
+	if err != nil {
+		return false, err
+	}
+
+	if !h.HashGenerator.Equal(metric.Hash, sign) {
+		return false, fmt.Errorf("hash is not correct")
+	}
+
+	return valid.ValidateStruct(metric)
+}
+
+func (h *Handler) getSign(metric Metrics) (sign string, err error) {
+	switch metric.MType {
+	case MetricTypeCounter:
+		stringToHash := fmt.Sprintf("%s:%s:%d", metric.ID, metric.MType, *metric.Delta)
+		return h.HashGenerator.Generate(stringToHash)
+
+	default:
+		stringToHash := fmt.Sprintf("%s:%s:%f", metric.ID, metric.MType, *metric.Value)
+		return h.HashGenerator.Generate(stringToHash)
+	}
 }

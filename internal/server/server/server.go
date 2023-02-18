@@ -6,14 +6,13 @@ import (
 	"net/http"
 )
 
-func NewRouter(repository handlers.IRepository) http.Handler {
-	r := chi.NewRouter()
+func AddHandlers(r *chi.Mux, repository handlers.IRepository, hashGenerator handlers.IHashGenerator) http.Handler {
 
-	r.Method("POST", "/update/{metricType}/{metricName}/{metricValue}", handlers.NewUpdateHandler(
+	r.Method("POST", "/update/{metricType}/{metricName}/{metricValue}", handlers.NewUpdateHandlerDefault(
 		repository,
 		ParameterBag{},
 	))
-	r.Method("GET", "/value/{metricType}/{metricName}", handlers.NewGetHandler(
+	r.Method("GET", "/value/{metricType}/{metricName}", handlers.NewGetHandlerDefault(
 		repository,
 		ParameterBag{},
 	))
@@ -22,9 +21,14 @@ func NewRouter(repository handlers.IRepository) http.Handler {
 	})
 
 	//region JSON-API
-	r.Method("POST", "/update/", handlers.NewUpdateHandler(repository, ParameterBag{}))
-	r.Method("POST", "/value/", handlers.NewGetHandler(repository, ParameterBag{}))
+	r.Method("POST", "/update/", handlers.NewUpdateHandlerWithHashGenerator(repository, ParameterBag{}, hashGenerator, hashGenerator == nil))
+	r.Method("POST", "/value/", handlers.NewGetHandlerWithHashGenerator(repository, ParameterBag{}, hashGenerator, true))
+	r.Method("POST", "/updates/", handlers.NewUpdatesHandlerWithHashGenerator(repository, ParameterBag{}, hashGenerator, hashGenerator == nil))
 	//endregion
+
+	if repositoryWithHealthCheck, ok := repository.(handlers.IRepositoryWithHealthCheck); ok {
+		r.Method("GET", "/ping", handlers.NewHealthcheckHandler(repositoryWithHealthCheck))
+	}
 
 	return gzipHandle(r)
 }
