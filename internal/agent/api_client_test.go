@@ -14,7 +14,7 @@ import (
 
 func TestClient_SendMetrics(t *testing.T) {
 	type testCase struct {
-		hash         IHashGenerator
+		key          string
 		expectedBody string
 	}
 	value := rand.Int()
@@ -25,11 +25,11 @@ func TestClient_SendMetrics(t *testing.T) {
 
 	tests := map[string]testCase{
 		"default": {
-			nil,
+			"",
 			fmt.Sprintf(`[{"id":"metricNameTest","type":"counter","delta":%d}]`, value),
 		},
 		"with key": {
-			h,
+			"secret",
 			fmt.Sprintf(`[{"id":"metricNameTest","type":"counter","delta":%d,"hash":"%s"}]`, value, sign),
 		},
 	}
@@ -47,11 +47,12 @@ func TestClient_SendMetrics(t *testing.T) {
 			defer server.Close()
 
 			logger := zerolog.Nop()
-			client := Client{
-				server.URL,
+			client := NewClient(
 				&logger,
-				tt.hash,
-			}
+				server.URL,
+				tt.key,
+				1,
+			)
 			client.SendMetrics([]IMetric{
 				MetricCounter{value, "metricNameTest"},
 			})

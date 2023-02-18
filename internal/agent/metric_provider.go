@@ -2,8 +2,12 @@ package agent
 
 import (
 	"fmt"
+	"github.com/rs/zerolog"
+	"github.com/shirou/gopsutil/v3/cpu"
+	"github.com/shirou/gopsutil/v3/mem"
 	"math/rand"
 	"runtime"
+	"sync"
 )
 
 const (
@@ -11,9 +15,56 @@ const (
 	MetricTypeCounter = "counter"
 )
 
-type MetricProvider struct{}
+type MetricProvider struct {
+	logger *zerolog.Logger
+}
 
-func (mp *MetricProvider) GetMetrics(pollCounter int) []IMetric {
+func (mp *MetricProvider) GetMetrics(pollCounter int) (metrics []IMetric) {
+	resultCh := make(chan []IMetric)
+	wg := &sync.WaitGroup{}
+	wg.Add(3)
+	go func() {
+		resultCh <- getCustomMetrics(pollCounter)
+		wg.Done()
+	}()
+	go func() {
+		resultCh <- getRuntimeMetrics()
+		wg.Done()
+	}()
+	go func() {
+		metrics, err := getGopsutilMetrics()
+		if err != nil {
+			mp.logger.Warn().Msgf("error while gathering the metrics with gopsutil. Error: %s\n", err.Error())
+			wg.Done()
+			return
+		}
+
+		resultCh <- metrics
+		wg.Done()
+	}()
+	go func() {
+		wg.Wait()
+		close(resultCh)
+	}()
+
+	for v := range resultCh {
+		metrics = append(metrics, v...)
+	}
+
+	return metrics
+}
+
+func getCustomMetrics(pollCounter int) []IMetric {
+	//time.Sleep(100 * time.Millisecond)
+	return []IMetric{
+		//custom
+		MetricCounter{pollCounter, "PollCount"},
+		MetricGauge{rand.Float64(), "RandomValue"},
+	}
+}
+
+func getRuntimeMetrics() []IMetric {
+	//time.Sleep(200 * time.Millisecond)
 	var memStats = runtime.MemStats{}
 	runtime.ReadMemStats(&memStats)
 
@@ -45,12 +96,23 @@ func (mp *MetricProvider) GetMetrics(pollCounter int) []IMetric {
 		MetricGauge{float64(memStats.StackSys), "StackSys"},
 		MetricGauge{float64(memStats.Sys), "Sys"},
 		MetricGauge{float64(memStats.TotalAlloc), "TotalAlloc"},
-
-		//custom
-		MetricCounter{pollCounter, "PollCount"},
-		MetricGauge{rand.Float64(), "RandomValue"},
 	}
+}
 
+func getGopsutilMetrics() (metrics []IMetric, err error) {
+	memory, err := mem.VirtualMemory()
+	if err != nil {
+		return metrics, err
+	}
+	percent, err := cpu.Percent(0, false)
+	if err != nil {
+		return metrics, err
+	}
+	return []IMetric{
+		MetricGauge{float64(memory.Total), "TotalMemory"},
+		MetricGauge{float64(memory.Free), "FreeMemory"},
+		MetricGauge{percent[0], "CPUutilization1"},
+	}, nil
 }
 
 type MetricGauge struct {
