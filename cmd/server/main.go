@@ -79,9 +79,15 @@ func main() {
 
 	var repository handlers.IRepository
 	if cfg.DatabaseDsn != "" {
-		repository, err = createDBStorage(cfg)
+		db, err := sql.Open("pgx", cfg.DatabaseDsn)
 		if err != nil {
 			logger.Error().Msgf("Cannot connect to db. Error: %s\n", err.Error())
+		}
+		defer db.Close()
+
+		repository, err = createDBStorage(db)
+		if err != nil {
+			logger.Error().Msgf("Cannot create db storage. Error: %s\n", err.Error())
 			return
 		}
 	} else {
@@ -115,12 +121,7 @@ func createMemStorage(cfg Config) (handlers.IRepository, error) {
 	return memStorage, nil
 }
 
-func createDBStorage(cfg Config) (*storage.DBStorage, error) {
-	db, err := sql.Open("pgx", cfg.DatabaseDsn)
-	if err != nil {
-		return nil, err
-	}
-	defer db.Close()
+func createDBStorage(db *sql.DB) (*storage.DBStorage, error) {
 
 	dbStorage, err := storage.NewDBStorage(db)
 	if err != nil {
