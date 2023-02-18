@@ -11,14 +11,34 @@ import (
 	"strconv"
 )
 
-func NewClient(logger *zerolog.Logger, metricAggregatorService string, key string) *Client {
+type job struct {
+	metrics []IMetric
+	doneCh  chan error
+}
+
+func NewClient(logger *zerolog.Logger, metricAggregatorService string, key string, rateLimit int) *Client {
+	jobCh := make(chan job)
 	result := &Client{
 		MetricAggregatorService: metricAggregatorService,
 		logger:                  logger,
+		jobCh:                   jobCh,
 	}
 
 	if key != "" {
 		result.hashGenerator = utils.NewHashGenerator(key)
+	}
+
+	if rateLimit <= 0 {
+		return result
+	}
+
+	for i := 0; i < rateLimit; i++ {
+		go func() {
+			for job := range jobCh {
+				err := result.makeRequest(job.metrics)
+				job.doneCh <- err
+			}
+		}()
 	}
 
 	return result
@@ -28,33 +48,17 @@ type Client struct {
 	MetricAggregatorService string
 	logger                  *zerolog.Logger
 	hashGenerator           IHashGenerator
+	jobCh                   chan job
 }
 
 func (c *Client) SendMetrics(metrics []IMetric) error {
+	doneCh := make(chan error)
+	defer func() {
+		close(doneCh)
+	}()
+	c.jobCh <- job{metrics, doneCh}
 
-	body, err := c.createRequestBody(metrics)
-	if err != nil {
-		c.logger.Warn().Msgf("error while sending the metrics to server. Error: %s\n", err.Error())
-		return err
-	}
-	url := fmt.Sprintf("%s/updates/", c.MetricAggregatorService)
-
-	c.logger.Info().Msgf("client are making request. url: %s, body: %s \n", url, string(body))
-
-	post, err := http.Post(url, "application/json", bytes.NewReader(body))
-	if err != nil {
-		c.logger.Warn().Msgf("error while sending the metrics to server. Error: %s\n", err.Error())
-		return err
-	}
-	defer post.Body.Close()
-
-	if post.StatusCode != http.StatusOK {
-		err = fmt.Errorf("error while sending the metrics to server. Status: %d", post.StatusCode)
-		c.logger.Warn().Err(err).Msg("")
-		return err
-	}
-
-	return nil
+	return <-doneCh
 }
 
 func (c *Client) createRequestBody(metrics []IMetric) (body []byte, err error) {
@@ -117,6 +121,32 @@ func (c *Client) signMetricWithHash(metrics *Metrics) (err error) {
 	}
 
 	metrics.Hash = sign
+
+	return nil
+}
+
+func (c *Client) makeRequest(metrics []IMetric) error {
+	body, err := c.createRequestBody(metrics)
+	if err != nil {
+		c.logger.Warn().Msgf("error while sending the metrics to server. Error: %s\n", err.Error())
+		return err
+	}
+	url := fmt.Sprintf("%s/updates/", c.MetricAggregatorService)
+
+	c.logger.Info().Msgf("client are making request. url: %s, body: %s \n", url, string(body))
+
+	post, err := http.Post(url, "application/json", bytes.NewReader(body))
+	if err != nil {
+		c.logger.Warn().Msgf("error while sending the metrics to server. Error: %s\n", err.Error())
+		return err
+	}
+	defer post.Body.Close()
+
+	if post.StatusCode != http.StatusOK {
+		err = fmt.Errorf("error while sending the metrics to server. Status: %d", post.StatusCode)
+		c.logger.Warn().Err(err).Msg("")
+		return err
+	}
 
 	return nil
 }
