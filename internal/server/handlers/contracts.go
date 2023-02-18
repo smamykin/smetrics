@@ -26,6 +26,11 @@ type IRepository interface {
 	GetAllGauge() ([]GaugeMetric, error)
 	GetAllCounters() ([]CounterMetric, error)
 }
+
+type IRepositoryWithHealthCheck interface {
+	Healthcheck(context.Context) error
+}
+
 type IParametersBag interface {
 	GetURLParam(r *http.Request, key string) string
 }

@@ -1,7 +1,6 @@
 package main
 
 import (
-	"context"
 	"database/sql"
 	"flag"
 	"fmt"
@@ -76,41 +75,21 @@ func main() {
 
 	fmt.Printf("Starting the server. The configuration: %#v\n", cfg)
 
-	//var repository handlers.IRepository
-
 	r := chi.NewRouter()
 
 	var repository handlers.IRepository
 	if cfg.DatabaseDsn != "" {
-		//region database connection setup
-		db, err := sql.Open("pgx", cfg.DatabaseDsn)
+		repository, err = createDbStorage(cfg)
 		if err != nil {
 			logger.Error().Msgf("Cannot connect to db. Error: %s\n", err.Error())
 			return
 		}
-		defer db.Close()
-
-		addProbeEndpoint(r, db)
-		//endregion
-		dbStorage, err := storage.NewDBStorage(db)
-		if err != nil {
-			logger.Error().Msgf("Cannot create dbStorage. Error: %s\n", err.Error())
-			return
-		}
-		dbStorage.AddObserver(storage.GetLoggerObserver(logger))
-
-		repository = dbStorage
 	} else {
-		memStorage, err := storage.NewMemStorage(cfg.StoreFile, cfg.Restore, cfg.StoreInterval.Seconds() == 0)
+		repository, err = createMemStorage(cfg)
 		if err != nil {
 			logger.Error().Msgf("Cannot create memStorage. Error: %s\n", err.Error())
+			return
 		}
-		memStorage.AddObserver(storage.GetLoggerObserver(logger))
-
-		if storeInterval.Seconds() != 0 {
-			go utils.InvokeFunctionWithInterval(cfg.StoreInterval, getSaveToFileFunction(memStorage))
-		}
-		repository = memStorage
 	}
 
 	if cfg.Key == "" {
@@ -122,14 +101,34 @@ func main() {
 	logger.Error().Err(err).Msg("")
 }
 
-func addProbeEndpoint(r *chi.Mux, db *sql.DB) {
-	r.Method("GET", "/ping", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		ctx, cancel := context.WithTimeout(r.Context(), 1*time.Second)
-		defer cancel()
-		if err := db.PingContext(ctx); err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-		}
-	}))
+func createMemStorage(cfg Config) (handlers.IRepository, error) {
+	memStorage, err := storage.NewMemStorage(cfg.StoreFile, cfg.Restore, cfg.StoreInterval.Seconds() == 0)
+	if err != nil {
+		return nil, err
+	}
+	memStorage.AddObserver(storage.GetLoggerObserver(logger))
+
+	if cfg.StoreInterval.Seconds() != 0 {
+		go utils.InvokeFunctionWithInterval(cfg.StoreInterval, getSaveToFileFunction(memStorage))
+	}
+
+	return memStorage, nil
+}
+
+func createDbStorage(cfg Config) (*storage.DBStorage, error) {
+	db, err := sql.Open("pgx", cfg.DatabaseDsn)
+	if err != nil {
+		return nil, err
+	}
+	defer db.Close()
+
+	dbStorage, err := storage.NewDBStorage(db)
+	if err != nil {
+		return nil, err
+	}
+	dbStorage.AddObserver(storage.GetLoggerObserver(logger))
+
+	return dbStorage, nil
 }
 
 func getSaveToFileFunction(memStorage *storage.MemStorage) func() {

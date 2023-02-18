@@ -26,6 +26,10 @@ func AddHandlers(r *chi.Mux, repository handlers.IRepository, hashGenerator hand
 	r.Method("POST", "/updates/", handlers.NewUpdatesHandlerWithHashGenerator(repository, ParameterBag{}, hashGenerator, hashGenerator == nil))
 	//endregion
 
+	if repositoryWithHealthCheck, ok := repository.(handlers.IRepositoryWithHealthCheck); ok {
+		r.Method("GET", "/ping", handlers.NewHealthcheckHandler(repositoryWithHealthCheck))
+	}
+
 	return gzipHandle(r)
 }
 
